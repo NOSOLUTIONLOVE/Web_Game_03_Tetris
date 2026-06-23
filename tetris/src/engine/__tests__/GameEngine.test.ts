@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { GameEngine, type GameEngineCallbacks } from '../GameEngine';
+import { GameEngine, type GameEngineCallbacks, type GameSnapshot } from '../GameEngine';
 import { CONFIG } from '../../config';
 
 function makeCanvas(): HTMLCanvasElement {
@@ -34,6 +34,7 @@ function makeCanvas(): HTMLCanvasElement {
     save: noop,
     restore: noop,
     quadraticCurveTo: noop,
+    scale: noop,
     fillStyle: '',
     strokeStyle: '',
     lineWidth: 0,
@@ -53,13 +54,14 @@ function makeCanvas(): HTMLCanvasElement {
 }
 
 function makeEngine() {
-  const events: { phase?: string; score: number[]; lines: number[]; level: number[]; clears: Array<[number, boolean]>; levelUps: number[]; gameOver: Array<[number, boolean]> } = {
+  const events: { phase?: string; score: number[]; lines: number[]; level: number[]; clears: Array<[number, boolean]>; levelUps: number[]; gameOver: Array<[number, boolean]>; snapshots: GameSnapshot[] } = {
     score: [],
     lines: [],
     level: [],
     clears: [],
     levelUps: [],
     gameOver: [],
+    snapshots: [],
   };
 
   const callbacks: GameEngineCallbacks = {
@@ -70,6 +72,7 @@ function makeEngine() {
       events.score.push(snap.score);
       events.lines.push(snap.lines);
       events.level.push(snap.level);
+      events.snapshots.push(snap);
     },
     onLinesClear: (count, isTetris) => {
       events.clears.push([count, isTetris]);
@@ -349,5 +352,164 @@ describe('GameEngine - Audio 控制', () => {
     (engine as unknown as { handleAction: (a: string) => void }).handleAction('toggleMute');
     const after = audio.isEnabled();
     expect(after).toBe(!before);
+  });
+});
+
+describe('GameEngine - 软降持续', () => {
+  it('handleAction(softDrop) → softDropActive=true', () => {
+    const { engine } = makeEngine();
+    engine.startGame();
+    (engine as unknown as { handleAction: (a: string) => void }).handleAction('softDrop');
+    expect((engine as unknown as { softDropActive: boolean }).softDropActive).toBe(true);
+  });
+
+  it('handleAction(stopSoftDrop) → softDropActive=false', () => {
+    const { engine } = makeEngine();
+    engine.startGame();
+    // 先激活软降
+    (engine as unknown as { handleAction: (a: string) => void }).handleAction('softDrop');
+    expect((engine as unknown as { softDropActive: boolean }).softDropActive).toBe(true);
+    // 再停止软降
+    (engine as unknown as { handleAction: (a: string) => void }).handleAction('stopSoftDrop');
+    expect((engine as unknown as { softDropActive: boolean }).softDropActive).toBe(false);
+  });
+});
+
+describe('GameEngine - Lock Delay 集成', () => {
+  it('startGame 后 lockDelay 未激活', () => {
+    const { engine } = makeEngine();
+    engine.startGame();
+    const lockDelay = (engine as unknown as { lockDelay: { isActive: () => boolean } }).lockDelay;
+    expect(lockDelay.isActive()).toBe(false);
+  });
+
+  it('方块到达底部时 lockDelay 启动', () => {
+    const { engine } = makeEngine();
+    engine.startGame();
+    // 将当前方块移到最底部（ghost 位置）
+    const board = (engine as unknown as { board: { getGhostY: (p: unknown) => number } }).board;
+    const current = (engine as unknown as { current: { position: { x: number; y: number }; clone: () => unknown } }).current;
+    const ghostY = board.getGhostY(current);
+    // 直接设置方块位置到 ghost 位置
+    (engine as unknown as { current: { position: { x: number; y: number } } }).current.position.y = ghostY;
+    // 调用 update 触发重力 → tryMove(0,1) 失败 → lockDelay.start()
+    (engine as unknown as { update: (dt: number) => void }).update(1000);
+    const lockDelay = (engine as unknown as { lockDelay: { isActive: () => boolean } }).lockDelay;
+    expect(lockDelay.isActive()).toBe(true);
+  });
+
+  it('lockDelay 激活时移动方块会重置延迟', () => {
+    const { engine } = makeEngine();
+    engine.startGame();
+    const lockDelay = (engine as unknown as {
+      lockDelay: { start: () => void; tick: (dt: number) => void; shouldLock: () => boolean; isActive: () => boolean };
+    }).lockDelay;
+    // 手动启动 lockDelay 并 tick 到应锁定
+    lockDelay.start();
+    lockDelay.tick(CONFIG.LOCK_DELAY.DELAY_MS);
+    expect(lockDelay.shouldLock()).toBe(true);
+    // 移动方块 → tryMove → lockDelay.reset()
+    (engine as unknown as { handleAction: (a: string) => void }).handleAction('moveLeft');
+    // reset 后 elapsed=0，shouldLock 应为 false
+    expect(lockDelay.shouldLock()).toBe(false);
+  });
+});
+
+describe('GameEngine - B2B 状态', () => {
+  it('Tetris 消行后 snapshot.b2b = true', () => {
+    const { engine, events } = makeEngine();
+    engine.startGame();
+    // 填满最底 4 行（Tetris）
+    const board = (engine as unknown as { board: { getFullGrid: () => Array<Array<string | null>> } }).board;
+    const grid = board.getFullGrid();
+    const bottomRow = CONFIG.GRID.ROWS + CONFIG.GRID.BUFFER_ROWS - 1;
+    for (let y = bottomRow - 3; y <= bottomRow; y++) {
+      for (let x = 0; x < CONFIG.GRID.COLS; x++) {
+        grid[y]![x] = 'I';
+      }
+    }
+    // 触发 hardDrop 锁定当前方块并消行
+    (engine as unknown as { handleAction: (a: string) => void }).handleAction('hardDrop');
+    // 最后一个 snapshot 应包含 b2b=true
+    const lastSnap = events.snapshots[events.snapshots.length - 1];
+    expect(lastSnap).toBeDefined();
+    expect(lastSnap.b2b).toBe(true);
+  });
+
+  it('Single 消行后 snapshot.b2b = false', () => {
+    const { engine, events } = makeEngine();
+    engine.startGame();
+    // 填满最底 1 行（Single）
+    const board = (engine as unknown as { board: { getFullGrid: () => Array<Array<string | null>> } }).board;
+    const grid = board.getFullGrid();
+    const bottomRow = CONFIG.GRID.ROWS + CONFIG.GRID.BUFFER_ROWS - 1;
+    for (let x = 0; x < CONFIG.GRID.COLS; x++) {
+      grid[bottomRow]![x] = 'I';
+    }
+    // 触发 hardDrop 锁定当前方块并消行
+    (engine as unknown as { handleAction: (a: string) => void }).handleAction('hardDrop');
+    // 最后一个 snapshot 应包含 b2b=false（Single 不是硬消行）
+    const lastSnap = events.snapshots[events.snapshots.length - 1];
+    expect(lastSnap).toBeDefined();
+    expect(lastSnap.b2b).toBe(false);
+  });
+});
+
+describe('GameEngine - 统计跟踪', () => {
+  it('startGame 后 stats 重置（pieces=1 因出生首个方块，其余为 0）', () => {
+    const { engine, events } = makeEngine();
+    engine.startGame();
+    const lastSnap = events.snapshots[events.snapshots.length - 1];
+    // startGame 会出生首个方块，故 pieces=1；其余统计均为 0
+    expect(lastSnap.stats).toEqual({
+      pieces: 1,
+      singles: 0,
+      doubles: 0,
+      triples: 0,
+      tetrises: 0,
+      tSpins: 0,
+      tSpinMinis: 0,
+      perfectClears: 0,
+    });
+  });
+
+  it('锁定方块后 stats.pieces 递增', () => {
+    const { engine, events } = makeEngine();
+    engine.startGame();
+    const beforeSnap = events.snapshots[events.snapshots.length - 1];
+    const beforePieces = beforeSnap.stats.pieces;
+    // hardDrop 锁定当前方块
+    (engine as unknown as { handleAction: (a: string) => void }).handleAction('hardDrop');
+    const afterSnap = events.snapshots[events.snapshots.length - 1];
+    expect(afterSnap.stats.pieces).toBe(beforePieces + 1);
+  });
+
+  it('Tetris 消行后 stats.tetrises 递增', () => {
+    const { engine, events } = makeEngine();
+    engine.startGame();
+    // 填满最底 4 行
+    const board = (engine as unknown as { board: { getFullGrid: () => Array<Array<string | null>> } }).board;
+    const grid = board.getFullGrid();
+    const bottomRow = CONFIG.GRID.ROWS + CONFIG.GRID.BUFFER_ROWS - 1;
+    for (let y = bottomRow - 3; y <= bottomRow; y++) {
+      for (let x = 0; x < CONFIG.GRID.COLS; x++) {
+        grid[y]![x] = 'I';
+      }
+    }
+    (engine as unknown as { handleAction: (a: string) => void }).handleAction('hardDrop');
+    const lastSnap = events.snapshots[events.snapshots.length - 1];
+    expect(lastSnap.stats.tetrises).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('GameEngine - handleActionPublic', () => {
+  it('handleActionPublic 存在且与 handleAction 行为一致', () => {
+    const { engine } = makeEngine();
+    engine.startGame();
+    const before = (engine as unknown as { current: { position: { x: number; y: number } } }).current.position.x;
+    // 通过 handleActionPublic 移动
+    engine.handleActionPublic('moveRight');
+    const after = (engine as unknown as { current: { position: { x: number; y: number } } }).current.position.x;
+    expect(after).toBe(before + 1);
   });
 });

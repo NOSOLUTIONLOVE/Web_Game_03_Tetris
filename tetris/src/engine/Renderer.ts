@@ -54,6 +54,10 @@ export class Renderer {
   private panelHeight: number;
   private clearAnimation: ClearAnimation | null = null;
   private levelUpAnimation: LevelUpAnimation | null = null;
+  // 设计尺寸（CSS 像素）与 DPR，用于高分辨率渲染
+  private designWidth: number;
+  private designHeight: number;
+  private dpr: number;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -77,8 +81,19 @@ export class Renderer {
     const totalWidth = this.panelWidth + gap + this.playfieldWidth + gap + this.panelWidth;
     const totalHeight = this.playfieldHeight;
 
-    this.canvas.width = totalWidth;
-    this.canvas.height = totalHeight;
+    // 保存设计尺寸（CSS 像素）
+    this.designWidth = totalWidth;
+    this.designHeight = totalHeight;
+
+    // DPI 感知：backing store 按 devicePixelRatio 放大
+    this.dpr = window.devicePixelRatio || 1;
+    this.canvas.width = this.designWidth * this.dpr;
+    this.canvas.height = this.designHeight * this.dpr;
+    // CSS 尺寸保持设计尺寸（由外部样式控制）
+    this.canvas.style.width = `${this.designWidth}px`;
+    this.canvas.style.height = `${this.designHeight}px`;
+    // 统一坐标系：所有绘制按设计尺寸，ctx 自动缩放
+    this.ctx.scale(this.dpr, this.dpr);
 
     this.playfieldX = this.panelWidth + gap;
     this.playfieldY = 0;
@@ -112,6 +127,20 @@ export class Renderer {
     this.levelUpAnimation = null;
   }
 
+  /** 重新计算 DPI 缩放（窗口拖到不同 DPI 显示器时） */
+  handleDPRChange(): void {
+    const newDpr = window.devicePixelRatio || 1;
+    if (newDpr === this.dpr) return;
+    this.dpr = newDpr;
+    // 重新设置 backing store
+    this.canvas.width = this.designWidth * this.dpr;
+    this.canvas.height = this.designHeight * this.dpr;
+    this.canvas.style.width = `${this.designWidth}px`;
+    this.canvas.style.height = `${this.designHeight}px`;
+    // 重新应用缩放（重置 width/height 会清除变换矩阵）
+    this.ctx.scale(this.dpr, this.dpr);
+  }
+
   // ============ 主渲染流程 ============
 
   render(snapshot: RenderSnapshot): void {
@@ -125,7 +154,7 @@ export class Renderer {
   /** 清空画布 */
   private clear(): void {
     this.ctx.fillStyle = CONFIG.COLORS.BG;
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.fillRect(0, 0, this.designWidth, this.designHeight);
   }
 
   // ============ 主网格 ============
@@ -401,7 +430,7 @@ export class Renderer {
     if (anim.isTetris) {
       const alpha = Math.max(0, 1 - elapsed / 300) * 0.4;
       this.ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.fillRect(0, 0, this.designWidth, this.designHeight);
     }
   }
 
@@ -451,8 +480,8 @@ export class Renderer {
     this.ctx.closePath();
   }
 
-  /** 获取画布尺寸（外部布局用） */
+  /** 获取画布尺寸（外部布局用，返回设计尺寸即 CSS 像素） */
   getDimensions(): { width: number; height: number } {
-    return { width: this.canvas.width, height: this.canvas.height };
+    return { width: this.designWidth, height: this.designHeight };
   }
 }

@@ -11,7 +11,7 @@
  * - 旋转尝试：返回 [newRotation, offsetX, offsetY] 候选列表
  */
 
-import { type Point, type Rotation, type TetrominoType } from '../config';
+import { CONFIG, type Point, type Rotation, type TetrominoType } from '../config';
 import { getShape, getRotations } from './tetrominoes';
 import { getKicksCW, getKicksCCW, type KickOffset } from './srs';
 
@@ -23,8 +23,8 @@ export class Tetromino {
   constructor(type: TetrominoType, position?: Point, rotation: Rotation = 0) {
     this.type = type;
     this.rotation = rotation;
-    // 出生位置：水平居中（列 = (10 - 4) / 2 = 3），顶部 y = 0（缓冲区）
-    this.position = position ?? { x: 3, y: 0 };
+    // 出生位置：从配置读取（水平居中，顶部缓冲区）
+    this.position = position ?? { x: CONFIG.SPAWN.X, y: CONFIG.SPAWN.Y };
   }
 
   /**

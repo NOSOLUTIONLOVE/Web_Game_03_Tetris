@@ -11,6 +11,8 @@
  * - 不依赖 React（除 canvas）
  * - 内部状态私有，避免高频更新 store
  * - 通过 callbacks 通知外部状态变化
+ * - 锁定延迟（Lock Delay）+ DAS/ARR 输入
+ * - T-Spin 检测 + B2B/Combo 计分
  *
  * 事件驱动：
  * - 状态变化（phase）→ onPhaseChange
@@ -33,6 +35,28 @@ import { Renderer } from './Renderer';
 import { Input, type Action } from './Input';
 import { AudioSystem } from '../lib/audio';
 import { storage } from '../lib/storage';
+import { LockDelayManager } from './LockDelayManager';
+import { ScoringSystem } from './ScoringSystem';
+
+/** 游戏统计数据 */
+export interface GameStats {
+  /** 总方块数 */
+  pieces: number;
+  /** 单消次数 */
+  singles: number;
+  /** 双消次数 */
+  doubles: number;
+  /** 三消次数 */
+  triples: number;
+  /** Tetris（四消）次数 */
+  tetrises: number;
+  /** T-Spin Full 次数 */
+  tSpins: number;
+  /** T-Spin Mini 次数 */
+  tSpinMinis: number;
+  /** Perfect Clear 次数 */
+  perfectClears: number;
+}
 
 export interface GameSnapshot {
   grid: Grid; // 显示网格（不含缓冲区）
@@ -51,6 +75,10 @@ export interface GameSnapshot {
   lines: number;
   combo: number;
   isNewRecord: boolean;
+  /** B2B（Back-to-Back）是否激活 */
+  b2b: boolean;
+  /** 游戏统计数据 */
+  stats: GameStats;
 }
 
 export interface GameEngineCallbacks {
@@ -101,6 +129,36 @@ export class GameEngine {
   // ============ 软降状态 ============
   private softDropActive = false;
 
+  // ============ 锁定延迟 ============
+  private lockDelay = new LockDelayManager();
+
+  // ============ 计分系统 ============
+  private scoring = new ScoringSystem();
+
+  // ============ T-Spin 追踪 ============
+  private lastMoveWasRotate = false;
+
+  // ============ B2B 状态 ============
+  private b2bActive = false;
+
+  // ============ 下落间隔缓存 ============
+  private dropIntervalCache = new Map<number, number>();
+
+  // ============ 统计数据 ============
+  private stats: GameStats = {
+    pieces: 0,
+    singles: 0,
+    doubles: 0,
+    triples: 0,
+    tetrises: 0,
+    tSpins: 0,
+    tSpinMinis: 0,
+    perfectClears: 0,
+  };
+
+  // ============ 页面可见性 ============
+  private visibilityHandler: (() => void) | null = null;
+
   constructor(options: GameEngineOptions) {
     const { canvas, callbacks } = options;
     this.callbacks = callbacks;
@@ -126,11 +184,25 @@ export class GameEngine {
     this.audio.resume();
     this.lastTime = performance.now();
     this.rafId = requestAnimationFrame((t) => this.loop(t));
+
+    // 页面隐藏时自动暂停
+    this.visibilityHandler = () => {
+      if (document.hidden && this.phase === 'playing') {
+        this.togglePause();
+      }
+      // 重置 lastTime 防止恢复后 delta 跳变
+      this.lastTime = performance.now();
+    };
+    document.addEventListener('visibilitychange', this.visibilityHandler);
   }
 
   public stop(): void {
     cancelAnimationFrame(this.rafId);
     this.input.unbind();
+    if (this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler);
+      this.visibilityHandler = null;
+    }
   }
 
   // ============ 主循环 ============
@@ -154,6 +226,16 @@ export class GameEngine {
   /** 逻辑更新 */
   private update(_dt: number): void {
     if (this.phase !== 'playing') return;
+    if (!this.current) return;
+
+    // 锁定延迟检查
+    if (this.lockDelay.isActive()) {
+      this.lockDelay.tick(_dt);
+      if (this.lockDelay.shouldLock()) {
+        this.lockCurrent();
+        return;
+      }
+    }
 
     // 计算当前等级的下落间隔
     const dropInterval = this.getDropInterval();
@@ -190,7 +272,10 @@ export class GameEngine {
     if (!this.current) return;
     const moved = this.tryMove(this.current, 0, 1);
     if (!moved) {
-      this.lockCurrent();
+      // 方块已落地 — 启动锁定延迟（若尚未激活）
+      if (!this.lockDelay.isActive()) {
+        this.lockDelay.start();
+      }
     }
   }
 
@@ -200,6 +285,11 @@ export class GameEngine {
     moved.move(dx, dy);
     if (this.board.isValidPosition(moved)) {
       piece.move(dx, dy);
+      // 移动后重置旋转标记和锁定延迟
+      this.lastMoveWasRotate = false;
+      if (this.lockDelay.isActive()) {
+        this.lockDelay.reset();
+      }
       return true;
     }
     return false;
@@ -210,6 +300,8 @@ export class GameEngine {
     if (!this.current) return;
     this.board.lockPiece(this.current);
     this.audio.playLock();
+    this.lockDelay.stop();
+    this.lastMoveWasRotate = false;
 
     // 检查消行
     const fullLines = this.board.findFullLines();
@@ -219,28 +311,51 @@ export class GameEngine {
       this.combo = -1; // 重置连击
     }
 
-    // 出生新方块
-    this.spawnNext();
-
-    // 推送状态
-    this.pushState();
+    // 出生新方块（可能触发 Game Over）
+    const gameOver = this.spawnNext();
+    if (!gameOver) {
+      this.pushState();
+    }
   }
 
-  /** 处理消行 */
+  /** 处理消行（使用 ScoringSystem 计分） */
   private handleLineClear(rows: number[]): void {
     const count = rows.length;
     this.combo++;
 
-    // 计分
-    const baseScore = [0, CONFIG.SCORE.SINGLE, CONFIG.SCORE.DOUBLE, CONFIG.SCORE.TRIPLE, CONFIG.SCORE.TETRIS][count]!;
-    let lineScore = baseScore * this.level;
-    if (this.combo > 0) {
-      lineScore += CONFIG.SCORE.COMBO_BONUS * this.combo;
-    }
-    this.score += lineScore;
-    this.lines += count;
+    // T-Spin 检测（仅当上一步为旋转时）
+    const isTSpin = this.lastMoveWasRotate && this.current
+      ? this.board.isTSpin(this.current, this.lastMoveWasRotate)
+      : 'none';
 
-    // 等级提升（每 10 行）
+    // 先消行，再检查 Perfect Clear
+    this.board.clearLines(rows);
+    const isPerfectClear = this.board.isEmpty();
+
+    // 计分
+    const result = this.scoring.calculate({
+      lineCount: count,
+      level: this.level,
+      combo: Math.max(0, this.combo),
+      isTSpin,
+      isPerfectClear,
+      b2bActive: this.b2bActive,
+    });
+
+    this.score += result.points;
+    this.lines += count;
+    this.b2bActive = result.newB2B;
+
+    // 更新统计
+    if (count === 1) this.stats.singles++;
+    else if (count === 2) this.stats.doubles++;
+    else if (count === 3) this.stats.triples++;
+    else if (count >= 4) this.stats.tetrises++;
+    if (isTSpin === 'full') this.stats.tSpins++;
+    if (isTSpin === 'mini') this.stats.tSpinMinis++;
+    if (isPerfectClear) this.stats.perfectClears++;
+
+    // 等级提升（每 LINES_PER_LEVEL 行）
     const newLevel = Math.floor(this.lines / CONFIG.SPEED.LINES_PER_LEVEL) + 1;
     if (newLevel > this.level) {
       this.level = newLevel;
@@ -254,30 +369,32 @@ export class GameEngine {
 
     // 通知 UI
     this.callbacks.onLinesClear(count, count >= 4);
-
-    // 实际消行
-    this.board.clearLines(rows);
   }
 
-  /** 出生新方块 */
-  private spawnNext(): void {
+  /** 出生新方块，返回是否触发了 Game Over */
+  private spawnNext(): boolean {
     const type = this.nextQueue.shift();
     if (!type) {
       this.gameOver();
-      return;
+      return true;
     }
     // 补足 Next 队列
     while (this.nextQueue.length < CONFIG.NEXT_COUNT + 1) {
       this.nextQueue.push(...this.bag.take(CONFIG.NEXT_COUNT + 1 - this.nextQueue.length));
     }
 
-    this.current = new Tetromino(type, { x: 3, y: 0 });
+    this.current = new Tetromino(type, { x: CONFIG.SPAWN.X, y: CONFIG.SPAWN.Y });
     this.holdUsed = false; // 新方块出生，解锁 Hold
+    this.lockDelay.stop();
+    this.stats.pieces++;
+    this.lastMoveWasRotate = false;
 
     // Game Over 判定
     if (this.board.isGameOver(this.current)) {
       this.gameOver();
+      return true;
     }
+    return false;
   }
 
   /** 游戏结束 */
@@ -309,6 +426,22 @@ export class GameEngine {
     this.holdType = null;
     this.holdUsed = false;
     this.gravityAccumulator = 0;
+    this.lockDelay.stop();
+    this.scoring.reset();
+    this.b2bActive = false;
+    this.lastMoveWasRotate = false;
+    this.softDropActive = false;
+    this.stats = {
+      pieces: 0,
+      singles: 0,
+      doubles: 0,
+      triples: 0,
+      tetrises: 0,
+      tSpins: 0,
+      tSpinMinis: 0,
+      perfectClears: 0,
+    };
+    this.dropIntervalCache.clear();
     this.renderer.clearAnimations();
     this.spawnNext();
     this.setPhase('playing');
@@ -336,12 +469,33 @@ export class GameEngine {
     return this.audio;
   }
 
+  /** 暴露 Input 实例，供外部（如设置面板）调整 DAS/ARR */
+  public getInput(): Input {
+    return this.input;
+  }
+
+  /** 停止软降（keyup 事件触发） */
+  public stopSoftDrop(): void {
+    this.softDropActive = false;
+  }
+
+  /** 外部调用动作入口（移动端按钮等） */
+  public handleActionPublic(action: Action): void {
+    this.handleAction(action);
+  }
+
   // ============ 输入处理 ============
 
   private handleAction(action: Action): void {
     if (action === 'toggleMute') {
       const enabled = this.audio.toggle();
       console.info(enabled ? '🔊 音效已开启' : '🔇 音效已关闭');
+      return;
+    }
+
+    // stopSoftDrop 是状态清理，任何阶段都应处理
+    if (action === 'stopSoftDrop') {
+      this.softDropActive = false;
       return;
     }
 
@@ -383,8 +537,6 @@ export class GameEngine {
           this.score += CONFIG.SCORE.SOFT_DROP;
           this.pushState();
         }
-        // 软降按住期间不需要持续触发
-        this.softDropActive = false;
         break;
       case 'hardDrop':
         this.hardDrop();
@@ -430,6 +582,11 @@ export class GameEngine {
       if (this.board.isValidPosition(test)) {
         this.current.applyRotation(rotation, offset);
         this.audio.playRotate();
+        // 旋转成功：标记并重置锁定延迟
+        this.lastMoveWasRotate = true;
+        if (this.lockDelay.isActive()) {
+          this.lockDelay.reset();
+        }
         this.pushState();
         return;
       }
@@ -443,6 +600,11 @@ export class GameEngine {
     if (this.board.isValidPosition(test)) {
       this.current.rotation = test.rotation;
       this.audio.playRotate();
+      // 旋转成功：标记并重置锁定延迟
+      this.lastMoveWasRotate = true;
+      if (this.lockDelay.isActive()) {
+        this.lockDelay.reset();
+      }
       this.pushState();
     }
   }
@@ -453,17 +615,25 @@ export class GameEngine {
 
     const currentType = this.current.type;
     if (this.holdType) {
-      // 互换
-      this.current = new Tetromino(this.holdType, { x: 3, y: 0 });
+      // 互换：用已 hold 的方块替换当前方块
+      this.current = new Tetromino(this.holdType, { x: CONFIG.SPAWN.X, y: CONFIG.SPAWN.Y });
     } else {
-      // 从 Next 队列取下一个
-      this.spawnNext();
+      // 首次 hold：从 Next 队列取下一个
+      const gameOver = this.spawnNext();
       this.holdType = currentType;
-      this.holdUsed = true; // 锁定：避免 spawnNext 重置后被再次 hold
+      this.holdUsed = true;
+      if (!gameOver) {
+        this.lockDelay.stop();
+        this.lastMoveWasRotate = false;
+        this.pushState();
+      }
       return;
     }
     this.holdType = currentType;
     this.holdUsed = true;
+
+    this.lockDelay.stop();
+    this.lastMoveWasRotate = false;
 
     if (this.board.isGameOver(this.current)) {
       this.gameOver();
@@ -473,12 +643,16 @@ export class GameEngine {
 
   // ============ 工具方法 ============
 
-  /** 当前等级的下落间隔（ms） */
+  /** 当前等级的下落间隔（ms），带缓存 */
   private getDropInterval(): number {
+    const cached = this.dropIntervalCache.get(this.level);
+    if (cached !== undefined) return cached;
     // 等级 1 = 1000ms，等级 20+ = ~16ms
     // 公式：max(MIN_MS, INITIAL_MS * ACCEL^(level-1))
     const interval = CONFIG.SPEED.INITIAL_MS * Math.pow(CONFIG.SPEED.ACCEL, this.level - 1);
-    return Math.max(CONFIG.SPEED.MIN_MS, interval);
+    const result = Math.max(CONFIG.SPEED.MIN_MS, interval);
+    this.dropIntervalCache.set(this.level, result);
+    return result;
   }
 
   private setPhase(p: GamePhase): void {
@@ -506,15 +680,12 @@ export class GameEngine {
       lines: this.lines,
       combo: Math.max(0, this.combo),
       isNewRecord: this.score > 0 && this.score >= this.highScore,
+      b2b: this.b2bActive,
+      stats: { ...this.stats },
     };
   }
 
   private pushState(): void {
     this.callbacks.onStateChange(this.buildSnapshot());
-  }
-
-  /** 软降结束（keyup 事件，外部调用） */
-  public endSoftDrop(): void {
-    this.softDropActive = false;
   }
 }

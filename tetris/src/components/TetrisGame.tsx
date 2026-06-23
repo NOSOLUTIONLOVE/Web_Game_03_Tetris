@@ -14,6 +14,7 @@ import { GameEngine } from '../engine/GameEngine';
 import { useGameStore } from '../store/useGameStore';
 import { HUD } from './HUD';
 import { Overlays } from './Overlays';
+import { MobileControls } from './MobileControls';
 
 const EngineContext = createContext<GameEngine | null>(null);
 
@@ -52,6 +53,8 @@ export function TetrisGame() {
           store.setCombo(snapshot.combo);
           store.setHold(snapshot.holdType);
           store.setNext(snapshot.nextQueue);
+          store.setB2B(snapshot.b2b);
+          store.setStats(snapshot.stats);
         },
         onLinesClear: (count, isTetris) => {
           useGameStore.getState().setLinesClear(count, isTetris);
@@ -85,16 +88,30 @@ export function TetrisGame() {
     }
   }, [audioEnabled, engine]);
 
+  // 同步持久化的 DAS/ARR 到 engine（页面加载时应用用户配置）
+  const dasMs = useGameStore((s) => s.dasMs);
+  const arrMs = useGameStore((s) => s.arrMs);
+  useEffect(() => {
+    if (engine) {
+      engine.getInput().setDAS(dasMs);
+    }
+  }, [dasMs, engine]);
+  useEffect(() => {
+    if (engine) {
+      engine.getInput().setARR(arrMs);
+    }
+  }, [arrMs, engine]);
+
   const phase = useGameStore((s) => s.phase);
 
   return (
     <EngineContext.Provider value={engine}>
       <div className="w-full max-w-3xl mx-auto p-4 space-y-4">
         <HUD />
-        <div className="relative mx-auto inline-block">
+        <div className="relative mx-auto inline-block max-w-full">
           <canvas
             ref={canvasRef}
-            className="rounded-xl ring-1 ring-white/10 shadow-2xl shadow-purple-500/20 touch-none"
+            className="rounded-xl ring-1 ring-white/10 shadow-2xl shadow-purple-500/20 touch-none max-w-full !h-auto"
           />
           {engine && (phase === 'menu' || phase === 'paused') && (
             <div className="absolute inset-0 pointer-events-auto">
@@ -102,6 +119,7 @@ export function TetrisGame() {
             </div>
           )}
         </div>
+        <MobileControls />
         {engine && (phase === 'over') && <Overlays />}
       </div>
     </EngineContext.Provider>
