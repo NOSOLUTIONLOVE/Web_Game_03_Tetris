@@ -11,6 +11,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { CONFIG, type GamePhase, type Grid, type TetrominoType } from '../config';
 import { storage } from '../lib/storage';
+import { type GameStats } from '../engine/GameEngine';
 
 interface GameStore {
   // ============ 状态 ============
@@ -24,10 +25,19 @@ interface GameStore {
   nextQueue: TetrominoType[];
   isNewRecord: boolean;
   audioEnabled: boolean;
+  /** B2B（Back-to-Back）是否激活 */
+  b2b: boolean;
+  /** 游戏统计数据 */
+  stats: GameStats;
   /** 一次性事件标记 */
   flashLines: number | null; // 最近消行数
   isTetris: boolean;
   levelUpLevel: number | null; // 最近升级目标
+
+  /** DAS（延迟自动移动）毫秒数，可运行时调整 */
+  dasMs: number;
+  /** ARR（自动重复速率）毫秒数，可运行时调整 */
+  arrMs: number;
 
   // ============ actions（GameEngine 调用）============
   setPhase: (phase: GamePhase) => void;
@@ -40,6 +50,8 @@ interface GameStore {
   setLinesClear: (count: number, isTetris: boolean) => void;
   setLevelUp: (level: number) => void;
   setNewRecord: (highScore: number) => void;
+  setB2B: (b2b: boolean) => void;
+  setStats: (stats: GameStats) => void;
 
   // ============ actions（UI 调用）============
   toggleAudio: () => void;
@@ -47,6 +59,8 @@ interface GameStore {
   resetRound: () => void;
   clearFlash: () => void;
   clearLevelUp: () => void;
+  setDAS: (ms: number) => void;
+  setARR: (ms: number) => void;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -63,9 +77,22 @@ export const useGameStore = create<GameStore>()(
       nextQueue: [],
       isNewRecord: false,
       audioEnabled: true,
+      b2b: false,
+      stats: {
+        pieces: 0,
+        singles: 0,
+        doubles: 0,
+        triples: 0,
+        tetrises: 0,
+        tSpins: 0,
+        tSpinMinis: 0,
+        perfectClears: 0,
+      },
       flashLines: null,
       isTetris: false,
       levelUpLevel: null,
+      dasMs: CONFIG.INPUT.DAS_MS,
+      arrMs: CONFIG.INPUT.ARR_MS,
 
       // GameEngine 回调
       setPhase: (phase) => set({ phase }),
@@ -79,6 +106,8 @@ export const useGameStore = create<GameStore>()(
       setLinesClear: (count, isTetris) => set({ flashLines: count, isTetris }),
       setLevelUp: (level) => set({ levelUpLevel: level }),
       setNewRecord: (highScore) => set({ highScore, isNewRecord: true }),
+      setB2B: (b2b) => set({ b2b }),
+      setStats: (stats) => set({ stats }),
 
       // UI 回调
       toggleAudio: () => set((s) => ({ audioEnabled: !s.audioEnabled })),
@@ -89,19 +118,34 @@ export const useGameStore = create<GameStore>()(
           lines: 0,
           combo: 0,
           isNewRecord: false,
+          b2b: false,
+          stats: {
+            pieces: 0,
+            singles: 0,
+            doubles: 0,
+            triples: 0,
+            tetrises: 0,
+            tSpins: 0,
+            tSpinMinis: 0,
+            perfectClears: 0,
+          },
           flashLines: null,
           isTetris: false,
           levelUpLevel: null,
         }),
       clearFlash: () => set({ flashLines: null, isTetris: false }),
       clearLevelUp: () => set({ levelUpLevel: null }),
+      setDAS: (ms) => set({ dasMs: ms }),
+      setARR: (ms) => set({ arrMs: ms }),
     }),
     {
       name: 'tetris:store',
-      // 只持久化 highScore 和 audioEnabled
+      // 只持久化 highScore、audioEnabled、dasMs、arrMs
       partialize: (s) => ({
         highScore: s.highScore,
         audioEnabled: s.audioEnabled,
+        dasMs: s.dasMs,
+        arrMs: s.arrMs,
       }),
     }
   )

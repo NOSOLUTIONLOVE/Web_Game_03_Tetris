@@ -240,3 +240,99 @@ describe('Board - Game Over', () => {
     expect(board.isGameOver(piece)).toBe(true);
   });
 });
+
+describe('Board - isEmpty', () => {
+  let board: Board;
+
+  beforeEach(() => {
+    board = new Board();
+  });
+
+  it('空网格 → true', () => {
+    expect(board.isEmpty()).toBe(true);
+  });
+
+  it('有一个格子被占 → false', () => {
+    const grid = board.getFullGrid();
+    grid[0]![0] = 'I';
+    expect(board.isEmpty()).toBe(false);
+  });
+
+  it('消行后网格全空 → true', () => {
+    // 填满最底行
+    const grid = board.getFullGrid();
+    const bottomRow = CONFIG.GRID.ROWS + CONFIG.GRID.BUFFER_ROWS - 1;
+    for (let x = 0; x < CONFIG.GRID.COLS; x++) {
+      grid[bottomRow]![x] = 'I';
+    }
+    expect(board.isEmpty()).toBe(false);
+    // 消除满行后应全空
+    board.clearLines([bottomRow]);
+    expect(board.isEmpty()).toBe(true);
+  });
+});
+
+describe('Board - isTSpin', () => {
+  let board: Board;
+
+  beforeEach(() => {
+    board = new Board();
+  });
+
+  /**
+   * T-Spin 检测说明：
+   * - T 中心位于 piece.position + (1, 1)
+   * - 四角：[左上, 右上, 左下, 右下] = [(cx-1,cy-1), (cx+1,cy-1), (cx-1,cy+1), (cx+1,cy+1)]
+   * - 旋转 0 的前方两角 = [0, 1] = 左上、右上
+   * - ≥3 角被占 且 ≥2 前方角被占 → 'full'
+   * - ≥3 角被占 且 <2 前方角被占 → 'mini'
+   * - <3 角被占 → 'none'
+   *
+   * T 块在 position (3, 0)，中心 (4, 1)，四角：
+   *   左上 (3,0)，右上 (5,0)，左下 (3,2)，右下 (5,2)
+   */
+
+  it('非 T 方块 → none', () => {
+    const piece = new Tetromino('O', { x: 3, y: 0 });
+    expect(board.isTSpin(piece, true)).toBe('none');
+  });
+
+  it('T 方块但 lastMoveWasRotate=false → none', () => {
+    const piece = new Tetromino('T', { x: 3, y: 0 });
+    expect(board.isTSpin(piece, false)).toBe('none');
+  });
+
+  it('T 方块 3 角被占且 2 前方角被占 → full', () => {
+    // T 块在 (3,0)，中心 (4,1)
+    // 前方角（旋转 0）：左上 (3,0)、右上 (5,0)
+    // 填充 (3,0), (5,0), (3,2) → 3 角，前方 2 角全占 → full
+    const grid = board.getFullGrid();
+    grid[0]![3] = 'I'; // 左上
+    grid[0]![5] = 'I'; // 右上
+    grid[2]![3] = 'I'; // 左下
+    const piece = new Tetromino('T', { x: 3, y: 0 });
+    expect(board.isTSpin(piece, true)).toBe('full');
+  });
+
+  it('T 方块 3 角被占但 <2 前方角被占 → mini', () => {
+    // T 块在 (3,0)，中心 (4,1)
+    // 前方角（旋转 0）：左上 (3,0)、右上 (5,0)
+    // 填充 (3,0), (3,2), (5,2) → 3 角，前方仅 (3,0) 被占 → mini
+    const grid = board.getFullGrid();
+    grid[0]![3] = 'I'; // 左上（前方）
+    grid[2]![3] = 'I'; // 左下
+    grid[2]![5] = 'I'; // 右下
+    const piece = new Tetromino('T', { x: 3, y: 0 });
+    expect(board.isTSpin(piece, true)).toBe('mini');
+  });
+
+  it('T 方块 <3 角被占 → none', () => {
+    // T 块在 (3,0)，中心 (4,1)
+    // 仅填充 2 角 → none
+    const grid = board.getFullGrid();
+    grid[0]![3] = 'I'; // 左上
+    grid[0]![5] = 'I'; // 右上
+    const piece = new Tetromino('T', { x: 3, y: 0 });
+    expect(board.isTSpin(piece, true)).toBe('none');
+  });
+});

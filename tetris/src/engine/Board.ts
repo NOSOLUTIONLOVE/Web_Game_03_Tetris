@@ -201,15 +201,81 @@ export class Board {
   }
 
   /**
-   * 检查指定列是否还有空位（用于 Game Over 边缘检测）
+   * 检查网格是否完全为空（用于 Perfect Clear 判定）
    */
-  isColumnOverflow(): boolean {
-    // 检查缓冲区（顶部 2 行）是否有方块
-    for (let y = 0; y < CONFIG.GRID.BUFFER_ROWS; y++) {
+  isEmpty(): boolean {
+    for (let y = 0; y < this.grid.length; y++) {
       for (let x = 0; x < CONFIG.GRID.COLS; x++) {
-        if (this.grid[y]?.[x] !== null) return true;
+        if (this.grid[y]![x] !== null) return false;
       }
     }
-    return false;
+    return true;
+  }
+
+  /**
+   * T-Spin 检测：基于 T 方块中心四角填充情况
+   *
+   * 规则（Tetris Guideline）：
+   * - 仅当方块类型为 T 且上一步为旋转时检测
+   * - T 中心位于 piece.position + (1, 1)
+   * - 检查中心四角是否被占据（越界视为已占据）
+   * - ≥3 角被占 且 ≥2 个"前方"角被占 → full T-Spin
+   * - ≥3 角被占 且 <2 个"前方"角被占 → mini T-Spin
+   *
+   * @param piece 当前方块
+   * @param lastMoveWasRotate 上一步是否为旋转
+   * @returns 'none' | 'mini' | 'full'
+   */
+  isTSpin(piece: Tetromino, lastMoveWasRotate: boolean): 'none' | 'mini' | 'full' {
+    if (piece.type !== 'T' || !lastMoveWasRotate) return 'none';
+
+    // T 中心的全局坐标
+    const centerX = piece.position.x + 1;
+    const centerY = piece.position.y + 1;
+
+    // 四角坐标：[左上, 右上, 左下, 右下]
+    const corners = [
+      { x: centerX - 1, y: centerY - 1 }, // 0: 左上
+      { x: centerX + 1, y: centerY - 1 }, // 1: 右上
+      { x: centerX - 1, y: centerY + 1 }, // 2: 左下
+      { x: centerX + 1, y: centerY + 1 }, // 3: 右下
+    ];
+
+    // 各旋转状态的"前方"两角索引
+    const frontCornersByRotation: Record<number, [number, number]> = {
+      0: [0, 1], // 旋转 0：左上、右上
+      1: [1, 3], // 旋转 1（CW）：右上、右下
+      2: [2, 3], // 旋转 2：左下、右下
+      3: [0, 2], // 旋转 3：左上、左下
+    };
+
+    // 统计被占据的角数
+    let filledCount = 0;
+    const filled = [false, false, false, false];
+    for (let i = 0; i < corners.length; i++) {
+      const c = corners[i]!;
+      if (this.isCellOccupied(c.x, c.y)) {
+        filled[i] = true;
+        filledCount++;
+      }
+    }
+
+    if (filledCount < 3) return 'none';
+
+    // 统计前方角被占据数
+    const frontIndices = frontCornersByRotation[piece.rotation] ?? [0, 1];
+    const frontFilled = frontIndices.filter((i) => filled[i]).length;
+
+    return frontFilled >= 2 ? 'full' : 'mini';
+  }
+
+  /**
+   * 检查指定格子是否被占据（越界视为已占据）
+   */
+  private isCellOccupied(x: number, y: number): boolean {
+    // 越界视为已占据
+    if (x < 0 || x >= CONFIG.GRID.COLS) return true;
+    if (y < 0 || y >= CONFIG.GRID.ROWS + CONFIG.GRID.BUFFER_ROWS) return true;
+    return this.grid[y]![x] !== null;
   }
 }

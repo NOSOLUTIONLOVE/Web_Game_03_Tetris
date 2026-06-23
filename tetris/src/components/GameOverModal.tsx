@@ -18,6 +18,7 @@ export function GameOverModal() {
   const lines = useGameStore((s) => s.lines);
   const level = useGameStore((s) => s.level);
   const isNewRecord = useGameStore((s) => s.isNewRecord);
+  const stats = useGameStore((s) => s.stats);
 
   return (
     <motion.div
@@ -53,6 +54,16 @@ export function GameOverModal() {
           <Stat label="LEVEL" value={level} accent="text-muted-foreground" />
         </div>
 
+        {/* 详细统计 */}
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <Stat label="PIECES" value={stats.pieces} accent="text-muted-foreground" small />
+          <Stat label="T-SPIN" value={stats.tSpins} accent="text-purple-400" small />
+          <Stat label="MINI" value={stats.tSpinMinis} accent="text-purple-300" small />
+          <Stat label="TETRIS" value={stats.tetrises} accent="text-cyan-400" small />
+          <Stat label="TRIPLE" value={stats.triples} accent="text-green-400" small />
+          <Stat label="P-CLEAR" value={stats.perfectClears} accent="text-yellow-400" small />
+        </div>
+
         <div className="mt-6 flex flex-col gap-2">
           <Button size="lg" onClick={() => engine.startGame()}>
             <RotateCcw className="h-4 w-4 mr-2" />
@@ -68,11 +79,25 @@ export function GameOverModal() {
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: number; accent: string }) {
+function Stat({
+  label,
+  value,
+  accent,
+  small = false,
+}: {
+  label: string;
+  value: number;
+  accent: string;
+  small?: boolean;
+}) {
   return (
-    <div className="text-center px-3 py-2 rounded-lg bg-secondary/60">
+    <div className="text-center px-2 py-1.5 rounded-lg bg-secondary/60">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`font-mono text-lg font-bold tabular-nums ${accent}`}>{value}</div>
+      <div
+        className={`font-mono font-bold tabular-nums ${accent} ${small ? 'text-sm' : 'text-lg'}`}
+      >
+        {value}
+      </div>
     </div>
   );
 }

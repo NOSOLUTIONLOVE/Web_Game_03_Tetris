@@ -20,6 +20,8 @@ export function HUD() {
   const level = useGameStore((s) => s.level);
   const audioEnabled = useGameStore((s) => s.audioEnabled);
   const toggleAudio = useGameStore((s) => s.toggleAudio);
+  const combo = useGameStore((s) => s.combo);
+  const b2b = useGameStore((s) => s.b2b);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
@@ -43,6 +45,32 @@ export function HUD() {
           {isNewRecord && (
             <Badge variant="success" className="animate-scale-in">
               NEW!
+            </Badge>
+          )}
+
+          {/* Combo 连击指示器：仅在 combo > 0 时显示 */}
+          {combo > 0 && (
+            <motion.div
+              key={combo}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: [0.8, 1.15, 1], opacity: 1 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="text-center px-3 py-1.5 rounded-lg bg-primary/20 border border-primary/30 min-w-[64px]"
+            >
+              <div className="text-[10px] uppercase tracking-wider text-primary/70">COMBO</div>
+              <div className="font-mono text-base font-bold tabular-nums text-primary">
+                x{combo}
+              </div>
+            </motion.div>
+          )}
+
+          {/* B2B（Back-to-Back）徽章：连续触发高难度消行时显示 */}
+          {b2b && (
+            <Badge
+              variant="default"
+              className="animate-scale-in bg-gradient-to-r from-purple-500 to-pink-500"
+            >
+              B2B
             </Badge>
           )}
 

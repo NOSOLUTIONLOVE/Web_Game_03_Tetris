@@ -155,13 +155,31 @@ export const CONFIG = {
   /** Next 预览数量 */
   NEXT_COUNT: 3,
 
+  /** 方块出生位置（水平居中，顶部缓冲区） */
+  SPAWN: {
+    X: 3,
+    Y: 0,
+  },
+
+  /** 输入系统：DAS（延迟自动移动）/ ARR（自动重复速率） */
+  INPUT: {
+    /** 按住方向键后开始自动重复的延迟（ms） */
+    DAS_MS: 167,
+    /** 自动重复间隔（ms） */
+    ARR_MS: 33,
+  },
+
+  /** 锁定延迟：方块落地后给予的操作缓冲时间 */
+  LOCK_DELAY: {
+    /** 锁定延迟时长（ms） */
+    DELAY_MS: 500,
+    /** 最大重置次数（防止无限延迟） */
+    RESET_MAX: 15,
+  },
+
   /** 触屏滑动阈值 */
   TOUCH: {
     THRESHOLD: 30,
-    SWIPE_LEFT: -1,
-    SWIPE_RIGHT: 1,
-    SWIPE_DOWN: 2,
-    SWIPE_UP: 3,
   },
 
   STORAGE_KEY: 'tetris:best_score',
