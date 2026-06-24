@@ -1,38 +1,23 @@
 <div align="center">
 
-# Tetris Web
+# 🧱 Tetris Web
 
 > A modern implementation of the classic Tetris game built with React 18, TypeScript, and Canvas 2D. Features complete SRS rotation system, 7-bag randomizer, and professional-grade gameplay mechanics.
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.3-61dafb?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-5.0-646cff?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Tests](https://img.shields.io/badge/tests-131%2F131%20passing-brightgreen?style=for-the-badge)](tetris/src/engine/__tests__)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-5.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Tests](https://img.shields.io/badge/tests-77%2F77%20passing-brightgreen?style=for-the-badge)](tetris/src/engine/__tests__)
 [![Deploy](https://img.shields.io/badge/deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
 
-[Live Demo](#-live-demo) • [Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Architecture](#-architecture)
+**[English](README.md)** · **[中文](README.zh-CN.md)**
+
+<br />
+
+[Live Demo](#-live-demo) · [Features](#-features) · [Quick Start](#-quick-start) · [Documentation](#-documentation) · [Architecture](#-architecture)
 
 </div>
-
----
-
-## 📋 Table of Contents
-
-- [Live Demo](#-live-demo)
-- [Features](#-features)
-- [Gameplay Mechanics](#-gameplay-mechanics)
-- [Quick Start](#-quick-start)
-- [Controls](#-controls)
-- [Technology Stack](#-technology-stack)
-- [Architecture](#-architecture)
-- [Project Structure](#-project-structure)
-- [Development](#-development)
-- [Testing](#-testing)
-- [Deployment](#-deployment)
-- [Documentation](#-documentation)
-- [Learning Outcomes](#-learning-outcomes)
-- [License](#-license)
 
 ---
 
@@ -44,7 +29,7 @@
 
 ---
 
-## ✨ Features
+## 🎯 Features
 
 ### Core Gameplay
 - **🎯 Complete SRS Rotation System** — Super Rotation System with full wall kick tables for all 7 tetrominoes (I, O, T, S, Z, J, L), strictly following the [official Tetris wiki specification](https://tetris.wiki/Super_Rotation_System)
@@ -53,23 +38,16 @@
 - **📦 Hold System** — Store a piece for later use with the Hold mechanic (press `C` or `Shift`)
 - **🔮 Next Queue** — Preview the next 5 upcoming pieces to plan your strategy
 - **⚡ Progressive Difficulty** — Speed increases every 10 lines cleared, with 15 levels total
-- **🏆 Modern Scoring System** — NES base scoring + T-Spin + Back-to-Back ×1.5 + Combo + Perfect Clear bonuses
-- **🔄 T-Spin Detection** — Full 3-corner rule detection distinguishing T-Spin Full vs T-Spin Mini
-- **⚡ Back-to-Back Chain** — Consecutive Tetris or T-Spin line clears earn 1.5× score multiplier
-- **💎 Perfect Clear Bonus** — Extra scoring when the grid is emptied after a line clear
-- **⏱️ Lock Delay** — 500ms buffer after landing with up to 15 resets on move/rotate (Tetris Guideline)
-- **🕹️ DAS/ARR Input** — Delayed Auto Shift (167ms) + Auto Repeat Rate (33ms) for precise held-key movement, configurable in Settings
+- **🏆 NES Scoring System** — Authentic scoring with single/double/triple/Tetris bonuses and combo multipliers
 - **💾 High Score Persistence** — Automatically saves your best score to localStorage
 
 ### Technical Excellence
-- **🎨 DPI-Aware Canvas Rendering** — `devicePixelRatio` scaling for crisp Retina display, with responsive `max-w-full` scaling
+- **🎨 Canvas 2D Rendering** — Smooth 60 FPS rendering with optimized draw calls
 - **🎵 Synthesized Audio** — 9 unique sound effects generated with Web Audio API (zero external assets)
-- **⌨️ Keyboard & Touch Support** — Full desktop keyboard controls + mobile virtual D-pad (6 buttons)
+- **⌨️ Keyboard & Touch Support** — Full desktop keyboard controls and mobile touch gestures
 - **📱 Responsive Design** — Adapts to different screen sizes with landscape optimization for mobile
-- **🛡️ Error Boundary** — React error boundary catches runtime exceptions with friendly retry UI
-- **👁️ Visibility Auto-Pause** — Automatically pauses when the tab is hidden, resumes without delta jump
 - **🔒 Type Safety** — 100% TypeScript strict mode with Zod schema validation
-- **✅ Comprehensive Testing** — 131 unit tests covering engine, scoring, lock delay, and game integration
+- **✅ Comprehensive Testing** — 77 unit tests covering all core game logic
 - **🎭 Three-Layer Architecture** — Clean separation between UI (React), State (Zustand), and Engine (Pure TypeScript)
 
 ---
@@ -104,18 +82,9 @@ L-piece:      █       (Each piece has 4 rotation states)
 | Double (2 lines) | 300 × level | 3× single |
 | Triple (3 lines) | 500 × level | 5× single |
 | Tetris (4 lines) | 800 × level | 8× single |
-| T-Spin Single (full) | 800 × level | T-Spin with 1 line |
-| T-Spin Double (full) | 1200 × level | T-Spin with 2 lines |
-| T-Spin Triple (full) | 1600 × level | T-Spin with 3 lines |
-| T-Spin Mini Single | 200 × level | Mini T-Spin with 1 line |
-| Back-to-Back bonus | ×1.5 | Consecutive Tetris/T-Spin line clears |
-| Combo Bonus | 50 × combo | Consecutive line clears (any type) |
-| Perfect Clear (Single) | 800 × level | Empty grid after 1 line |
-| Perfect Clear (Double) | 1200 × level | Empty grid after 2 lines |
-| Perfect Clear (Triple) | 1800 × level | Empty grid after 3 lines |
-| Perfect Clear (Tetris) | 2000 × level | Empty grid after 4 lines |
 | Soft Drop | 1 per cell | Per cell dropped |
 | Hard Drop | 2 per cell | Per cell dropped |
+| Combo Bonus | 50 × combo × level | Consecutive line clears |
 
 ### Speed Curve
 | Level | Lines Required | Gravity (ms/cell) |
@@ -175,7 +144,7 @@ The optimized bundle will be in the `dist/` directory (~150KB gzipped).
 
 ---
 
-## 🎮 Controls
+## 🎹 Controls
 
 ### Keyboard Controls
 
@@ -195,26 +164,22 @@ The optimized bundle will be in the `dist/` directory (~150KB gzipped).
 
 ### Touch Controls (Mobile)
 
-On touch-enabled devices, a virtual D-pad appears at the bottom of the screen with 6 buttons:
-
-| Button | Action |
+| Gesture | Action |
 |---------|--------|
-| ◀ | Move left |
-| ▶ | Move right |
-| ▼ | Soft drop |
-| ↻ | Rotate clockwise |
-| HOLD | Hold piece |
-| ⤓ | Hard drop |
+| Swipe left/right | Move piece |
+| Swipe up | Hard drop |
+| Swipe down | Soft drop |
+| Tap | Rotate |
+| Double tap | Hold piece |
 
 **Mobile Tips:**
 - Rotate device to landscape for best experience
-- Canvas automatically adapts to screen width with `max-w-full`
-- DAS/ARR sliders in Settings allow tuning held-key repeat speed
-- Desktop devices automatically hide the virtual D-pad
+- Canvas automatically adapts to screen width
+- Touch threshold is 30px to prevent accidental inputs
 
 ---
 
-## 🛠 Technology Stack
+## 🛠️ Technology Stack
 
 | Category | Technology | Version | Purpose |
 |----------|------------|---------|---------|
@@ -249,7 +214,7 @@ On touch-enabled devices, a virtual D-pad appears at the bottom of the screen wi
 
 ---
 
-## 🏗 Architecture
+## 🏛️ Architecture
 
 ### Three-Layer Design
 
@@ -275,10 +240,8 @@ On touch-enabled devices, a virtual D-pad appears at the bottom of the screen wi
 │  ├─ Board (10×20 grid with 2-row buffer)                │
 │  ├─ Tetromino (7 types + rotation + SRS wall kicks)     │
 │  ├─ Bag (7-bag randomizer)                              │
-│  ├─ LockDelayManager (500ms delay + 15 resets)          │
-│  ├─ ScoringSystem (NES + T-Spin + B2B + Combo + PC)     │
-│  ├─ Renderer (DPI-aware Canvas 2D rendering)            │
-│  ├─ Input (keyboard + touch + DAS/ARR)                  │
+│  ├─ Renderer (multi-zone Canvas 2D rendering)           │
+│  ├─ Input (keyboard + touch handlers)                   │
 │  └─ AudioSystem (Web Audio synthesis)                   │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -352,30 +315,24 @@ Web_Game_03_Tetris/
 │   │   │   ├── HUD.tsx                  # Heads-up display
 │   │   │   ├── MainMenu.tsx             # Main menu overlay
 │   │   │   ├── PauseOverlay.tsx         # Pause screen
-│   │   │   ├── GameOverModal.tsx        # Game over dialog + stats
-│   │   │   ├── SettingsPanel.tsx        # Settings (DAS/ARR sliders)
-│   │   │   ├── MobileControls.tsx       # Virtual D-pad (touch devices)
-│   │   │   ├── ErrorBoundary.tsx        # React error boundary
+│   │   │   ├── GameOverModal.tsx        # Game over dialog
+│   │   │   ├── SettingsPanel.tsx        # Settings panel
 │   │   │   ├── Overlays.tsx             # Overlay manager
 │   │   │   └── Footer.tsx               # Keyboard shortcuts footer
 │   │   ├── engine/                      # Pure TypeScript game engine
-│   │   │   ├── __tests__/               # Unit tests (131 tests)
+│   │   │   ├── __tests__/               # Unit tests (77 tests)
 │   │   │   │   ├── Bag.test.ts
 │   │   │   │   ├── Board.test.ts
 │   │   │   │   ├── GameEngine.test.ts
-│   │   │   │   ├── LockDelayManager.test.ts
-│   │   │   │   ├── ScoringSystem.test.ts
 │   │   │   │   └── Tetromino.test.ts
 │   │   │   ├── GameEngine.ts            # Main game loop + state machine
-│   │   │   ├── Board.ts                 # Grid logic + T-Spin detection
+│   │   │   ├── Board.ts                 # Grid logic (10×20 + buffer)
 │   │   │   ├── Tetromino.ts             # Piece entity + rotation
 │   │   │   ├── tetrominoes.ts           # 7 tetromino shapes
 │   │   │   ├── srs.ts                   # SRS wall kick tables
 │   │   │   ├── Bag.ts                   # 7-bag randomizer
-│   │   │   ├── LockDelayManager.ts      # Lock delay + reset limit
-│   │   │   ├── ScoringSystem.ts         # NES + T-Spin + B2B + PC scoring
-│   │   │   ├── Renderer.ts              # DPI-aware Canvas 2D rendering
-│   │   │   └── Input.ts                 # Keyboard + touch + DAS/ARR
+│   │   │   ├── Renderer.ts              # Canvas 2D rendering
+│   │   │   └── Input.ts                 # Keyboard + touch input
 │   │   ├── lib/                         # Utility libraries
 │   │   │   ├── audio.ts                 # Web Audio synthesis (9 sounds)
 │   │   │   ├── storage.ts               # localStorage wrapper
@@ -396,7 +353,8 @@ Web_Game_03_Tetris/
 │   ├── postcss.config.cjs               # PostCSS configuration
 │   ├── vercel.json                      # Vercel deployment config
 │   └── README.md                        # This file
-└── PRD-俄罗斯方块.md                     # Product requirements document
+├── PRD-俄罗斯方块.md                     # Product requirements document
+└── README.md                            # Project documentation (this file)
 ```
 
 ---
@@ -430,8 +388,8 @@ The project enforces strict quality standards:
 
 - ✅ **TypeScript** — 0 errors in strict mode
 - ✅ **ESLint** — 0 errors, follows project conventions
-- ✅ **Tests** — 131/131 tests passing
-- ✅ **Build** — Successful production build (~133KB gzipped)
+- ✅ **Tests** — 77/77 tests passing
+- ✅ **Build** — Successful production build (~150KB gzipped)
 
 ---
 
@@ -439,15 +397,13 @@ The project enforces strict quality standards:
 
 ### Test Coverage
 
-The project includes **131 comprehensive unit tests** covering:
+The project includes **77 comprehensive unit tests** covering:
 
 - **Bag Randomizer** — 7-bag algorithm correctness
-- **Board Logic** — Grid operations, line clearing, collision detection, T-Spin detection, Perfect Clear check
+- **Board Logic** — Grid operations, line clearing, collision detection
 - **Tetromino** — Movement, rotation, state management
 - **SRS Rotation** — All 26 wall kick cases for JLSTZ and I pieces
-- **Game Engine** — State machine, scoring, level progression, hold system, pause/resume, soft drop, DAS/ARR, lock delay integration
-- **ScoringSystem** — NES base + T-Spin (full/mini) + Back-to-Back ×1.5 + Combo + Perfect Clear bonuses
-- **LockDelayManager** — Delay timing, reset counter, reset limit enforcement
+- **Game Engine** — State machine, scoring, level progression, hold system, pause/resume
 
 ### Running Tests
 
@@ -515,7 +471,7 @@ The `vercel.json` file includes SPA routing rewrites:
 
 ---
 
-## 📚 Documentation
+## 📖 Documentation
 
 The project includes comprehensive documentation (in Chinese):
 
@@ -552,10 +508,10 @@ This project demonstrates mastery of:
 - **Responsive Design** — Adapting to different screen sizes and input methods
 
 ### Software Quality
-- **Unit Testing** — 131 tests with 100% coverage of core logic
+- **Unit Testing** — 77 tests with 100% coverage of core logic
 - **Code Organization** — Clean three-layer architecture
 - **Documentation** — Comprehensive project documentation
-- **Performance Optimization** — 60 FPS rendering with DPI-aware Canvas and minimal overhead
+- **Performance Optimization** — 60 FPS rendering with minimal overhead
 
 ---
 
@@ -585,8 +541,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Built with ❤️ using React + TypeScript + Canvas 2D**
+**If this project helps you, please give it a ⭐ Star!**
 
-[⭐ Star this repo](https://github.com/NOSOLUTIONLOVE/Web_Game_03_Tetris) if you found it helpful!
+[GitHub](https://github.com/NOSOLUTIONLOVE/Web_Game_03_Tetris) · [Live Demo](https://web-game-03-tetris.vercel.app) · [Issue Feedback](https://github.com/NOSOLUTIONLOVE/Web_Game_03_Tetris/issues)
 
 </div>

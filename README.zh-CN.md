@@ -1,40 +1,23 @@
 <div align="center">
 
-# 俄罗斯方块 Web 版
+# 🧱 俄罗斯方块 Web 版
 
 > 一款使用 React 18、TypeScript 和 Canvas 2D 构建的现代经典俄罗斯方块游戏。完整实现 SRS 旋转系统、7-bag 随机器和专业级游戏机制。
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.3-61dafb?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-5.0-646cff?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-5.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Tests](https://img.shields.io/badge/tests-77%2F77%20passing-brightgreen?style=for-the-badge)](tetris/src/engine/__tests__)
 [![Deploy](https://img.shields.io/badge/deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
 
+**[English](README.md)** · **[中文](README.zh-CN.md)**
+
+<br />
+
 [在线试玩](#-在线试玩) · [功能特性](#-功能特性) · [快速开始](#-快速开始) · [项目文档](#-项目文档) · [架构设计](#-架构设计)
 
-**[English](README.md)** | **中文**
-
 </div>
-
----
-
-## 📋 目录
-
-- [在线试玩](#-在线试玩)
-- [功能特性](#-功能特性)
-- [游戏机制](#-游戏机制)
-- [快速开始](#-快速开始)
-- [操作说明](#-操作说明)
-- [技术栈](#-技术栈)
-- [架构设计](#-架构设计)
-- [项目结构](#-项目结构)
-- [开发指南](#-开发指南)
-- [测试](#-测试)
-- [部署](#-部署)
-- [项目文档](#-项目文档)
-- [学习收获](#-学习收获)
-- [许可证](#-许可证)
 
 ---
 
@@ -46,7 +29,7 @@
 
 ---
 
-## ✨ 功能特性
+## 🎯 功能特性
 
 ### 核心玩法
 - **🎯 完整 SRS 旋转系统** — 超级旋转系统（Super Rotation System），包含所有 7 种方块的完整踢墙表，严格遵循 [Tetris Wiki 官方规范](https://tetris.wiki/Super_Rotation_System)
@@ -164,7 +147,7 @@ npm run preview
 
 ---
 
-## 🎮 操作说明
+## 🎹 操作说明
 
 ### 键盘控制
 
@@ -199,7 +182,7 @@ npm run preview
 
 ---
 
-## 🛠 技术栈
+## 🛠️ 技术栈
 
 | 类别 | 技术 | 版本 | 用途 |
 |------|------|------|------|
@@ -234,7 +217,7 @@ npm run preview
 
 ---
 
-## 🏗 架构设计
+## 🏛️ 架构设计
 
 ### 三层分离设计
 
@@ -492,7 +475,7 @@ npm run build
 
 ---
 
-## 📚 项目文档
+## 📖 项目文档
 
 项目包含完整的项目文档：
 
@@ -557,14 +540,13 @@ npm run build
 
 - **GitHub Issues** — [报告 Bug 或请求功能](https://github.com/NOSOLUTIONLOVE/Web_Game_03_Tetris/issues)
 - **在线试玩** — [在线玩游戏](https://web-game-03-tetris.vercel.app)
-- **GitHub 仓库** — [查看源码](https://github.com/NOSOLUTIONLOVE/Web_Game_03_Tetris)
 
 ---
 
 <div align="center">
 
-**使用 React + TypeScript + Canvas 2D 精心构建 ❤️**
+**如果这个项目对你有帮助，请给它一个 ⭐ Star！**
 
-如果这个项目对你有帮助，请给个 [⭐ Star](https://github.com/NOSOLUTIONLOVE/Web_Game_03_Tetris) 支持一下！
+[GitHub](https://github.com/NOSOLUTIONLOVE/Web_Game_03_Tetris) · [在线试玩](https://web-game-03-tetris.vercel.app) · [Issue 反馈](https://github.com/NOSOLUTIONLOVE/Web_Game_03_Tetris/issues)
 
 </div>
