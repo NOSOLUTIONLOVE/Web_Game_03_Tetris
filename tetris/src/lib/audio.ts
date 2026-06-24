@@ -21,6 +21,12 @@ export class AudioSystem {
   private ctx: AudioContext | null = null;
   private enabled: boolean = true;
   private masterGain: GainNode | null = null;
+  /** 当前音量（0-100），在 ensureCtx 创建 masterGain 时应用 */
+  private volume: number;
+
+  constructor(initialVolume: number = 100) {
+    this.volume = initialVolume;
+  }
 
   private ensureCtx(): AudioContext | null {
     if (this.ctx) return this.ctx;
@@ -32,7 +38,7 @@ export class AudioSystem {
       if (!AudioCtor) return null;
       this.ctx = new AudioCtor();
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = 0.15;
+      this.masterGain.gain.value = this.volume / 100;
       this.masterGain.connect(this.ctx.destination);
       return this.ctx;
     } catch {
@@ -48,6 +54,19 @@ export class AudioSystem {
     return this.enabled;
   }
 
+  /** 设置音量（0-100），实时生效 */
+  public setVolume(v: number): void {
+    this.volume = v;
+    if (this.masterGain) {
+      this.masterGain.gain.value = v / 100;
+    }
+  }
+
+  /** 获取当前音量（0-100） */
+  public getVolume(): number {
+    return this.volume;
+  }
+
   /** 切换音效开关，返回切换后的状态 */
   public toggle(): boolean {
     this.enabled = !this.enabled;
@@ -61,6 +80,15 @@ export class AudioSystem {
     const ctx = this.ensureCtx();
     if (ctx && ctx.state === 'suspended') {
       void ctx.resume();
+    }
+  }
+
+  /** 关闭并释放 AudioContext（StrictMode 下防止泄漏） */
+  public close(): void {
+    if (this.ctx) {
+      void this.ctx.close();
+      this.ctx = null;
+      this.masterGain = null;
     }
   }
 

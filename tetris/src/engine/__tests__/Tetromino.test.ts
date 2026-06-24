@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { Tetromino } from '../Tetromino';
 import { TETROMINOES, TETROMINO_TYPES, getRotations, getShape } from '../tetrominoes';
-import { KICKS_I, KICKS_JLSTZ } from '../srs';
+import { KICKS_I, KICKS_JLSTZ, KICKS_I_CCW, KICKS_JLSTZ_CCW } from '../srs';
 
 describe('Tetrominoes - 7 种方块形状', () => {
   it('TETROMINO_TYPES 包含 7 种方块', () => {
@@ -210,5 +210,213 @@ describe('SRS 踢墙表正确性', () => {
     for (let i = 0; i < 4; i++) {
       expect(KICKS_I[i as 0 | 1 | 2 | 3]!.length).toBe(5);
     }
+  });
+});
+
+describe('SRS 逆时针踢墙表正确性 (CCW)', () => {
+  // 官方表来源：https://tetris.wiki/Super_Rotation_System
+  // CCW 转换：0→L (fromRot=0), R→0 (fromRot=1), 2→R (fromRot=2), L→2 (fromRot=3)
+
+  it('KICKS_JLSTZ_CCW 0→L = [[0,0],[1,0],[1,1],[0,-2],[1,-2]]', () => {
+    expect(KICKS_JLSTZ_CCW[0]).toEqual([
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, -2],
+      [1, -2],
+    ]);
+  });
+
+  it('KICKS_JLSTZ_CCW R→0 = [[0,0],[1,0],[1,-1],[0,2],[1,2]]', () => {
+    expect(KICKS_JLSTZ_CCW[1]).toEqual([
+      [0, 0],
+      [1, 0],
+      [1, -1],
+      [0, 2],
+      [1, 2],
+    ]);
+  });
+
+  it('KICKS_JLSTZ_CCW 2→R = [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]]', () => {
+    expect(KICKS_JLSTZ_CCW[2]).toEqual([
+      [0, 0],
+      [-1, 0],
+      [-1, 1],
+      [0, -2],
+      [-1, -2],
+    ]);
+  });
+
+  it('KICKS_JLSTZ_CCW L→2 = [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]]', () => {
+    expect(KICKS_JLSTZ_CCW[3]).toEqual([
+      [0, 0],
+      [-1, 0],
+      [-1, -1],
+      [0, 2],
+      [-1, 2],
+    ]);
+  });
+
+  it('KICKS_I_CCW 0→L = [[0,0],[-1,0],[2,0],[-1,2],[2,-1]]', () => {
+    expect(KICKS_I_CCW[0]).toEqual([
+      [0, 0],
+      [-1, 0],
+      [2, 0],
+      [-1, 2],
+      [2, -1],
+    ]);
+  });
+
+  it('KICKS_I_CCW R→0 = [[0,0],[2,0],[-1,0],[2,1],[-1,-2]]', () => {
+    expect(KICKS_I_CCW[1]).toEqual([
+      [0, 0],
+      [2, 0],
+      [-1, 0],
+      [2, 1],
+      [-1, -2],
+    ]);
+  });
+
+  it('KICKS_I_CCW 2→R = [[0,0],[1,0],[-2,0],[1,-2],[-2,1]]', () => {
+    expect(KICKS_I_CCW[2]).toEqual([
+      [0, 0],
+      [1, 0],
+      [-2, 0],
+      [1, -2],
+      [-2, 1],
+    ]);
+  });
+
+  it('KICKS_I_CCW L→2 = [[0,0],[-2,0],[1,0],[-2,-1],[1,2]]', () => {
+    expect(KICKS_I_CCW[3]).toEqual([
+      [0, 0],
+      [-2, 0],
+      [1, 0],
+      [-2, -1],
+      [1, 2],
+    ]);
+  });
+
+  it('CCW 踢墙表 4 个旋转状态各有 5 个测试点', () => {
+    for (let i = 0; i < 4; i++) {
+      expect(KICKS_JLSTZ_CCW[i as 0 | 1 | 2 | 3]!.length).toBe(5);
+      expect(KICKS_I_CCW[i as 0 | 1 | 2 | 3]!.length).toBe(5);
+    }
+  });
+});
+
+describe('Tetromino - CCW 旋转尝试偏移值', () => {
+  // 通过 Tetromino.rotationAttemptsCCW() 验证各转换的实际偏移值
+
+  it('JLSTZ 0→L：目标旋转=3，偏移值匹配官方表', () => {
+    const piece = new Tetromino('T', { x: 3, y: 0 }, 0);
+    const attempts = piece.rotationAttemptsCCW();
+    expect(attempts.length).toBe(5);
+    expect(attempts[0]!.rotation).toBe(3);
+    expect(attempts.map((a) => a.offset)).toEqual([
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, -2],
+      [1, -2],
+    ]);
+  });
+
+  it('JLSTZ R→0：目标旋转=0，偏移值匹配官方表', () => {
+    const piece = new Tetromino('T', { x: 3, y: 0 }, 1);
+    const attempts = piece.rotationAttemptsCCW();
+    expect(attempts.length).toBe(5);
+    expect(attempts[0]!.rotation).toBe(0);
+    expect(attempts.map((a) => a.offset)).toEqual([
+      [0, 0],
+      [1, 0],
+      [1, -1],
+      [0, 2],
+      [1, 2],
+    ]);
+  });
+
+  it('JLSTZ 2→R：目标旋转=1，偏移值匹配官方表', () => {
+    const piece = new Tetromino('T', { x: 3, y: 0 }, 2);
+    const attempts = piece.rotationAttemptsCCW();
+    expect(attempts.length).toBe(5);
+    expect(attempts[0]!.rotation).toBe(1);
+    expect(attempts.map((a) => a.offset)).toEqual([
+      [0, 0],
+      [-1, 0],
+      [-1, 1],
+      [0, -2],
+      [-1, -2],
+    ]);
+  });
+
+  it('JLSTZ L→2：目标旋转=2，偏移值匹配官方表', () => {
+    const piece = new Tetromino('T', { x: 3, y: 0 }, 3);
+    const attempts = piece.rotationAttemptsCCW();
+    expect(attempts.length).toBe(5);
+    expect(attempts[0]!.rotation).toBe(2);
+    expect(attempts.map((a) => a.offset)).toEqual([
+      [0, 0],
+      [-1, 0],
+      [-1, -1],
+      [0, 2],
+      [-1, 2],
+    ]);
+  });
+
+  it('I 0→L：目标旋转=3，偏移值匹配官方表', () => {
+    const piece = new Tetromino('I', { x: 3, y: 0 }, 0);
+    const attempts = piece.rotationAttemptsCCW();
+    expect(attempts.length).toBe(5);
+    expect(attempts[0]!.rotation).toBe(3);
+    expect(attempts.map((a) => a.offset)).toEqual([
+      [0, 0],
+      [-1, 0],
+      [2, 0],
+      [-1, 2],
+      [2, -1],
+    ]);
+  });
+
+  it('I R→0：目标旋转=0，偏移值匹配官方表', () => {
+    const piece = new Tetromino('I', { x: 3, y: 0 }, 1);
+    const attempts = piece.rotationAttemptsCCW();
+    expect(attempts.length).toBe(5);
+    expect(attempts[0]!.rotation).toBe(0);
+    expect(attempts.map((a) => a.offset)).toEqual([
+      [0, 0],
+      [2, 0],
+      [-1, 0],
+      [2, 1],
+      [-1, -2],
+    ]);
+  });
+
+  it('I 2→R：目标旋转=1，偏移值匹配官方表', () => {
+    const piece = new Tetromino('I', { x: 3, y: 0 }, 2);
+    const attempts = piece.rotationAttemptsCCW();
+    expect(attempts.length).toBe(5);
+    expect(attempts[0]!.rotation).toBe(1);
+    expect(attempts.map((a) => a.offset)).toEqual([
+      [0, 0],
+      [1, 0],
+      [-2, 0],
+      [1, -2],
+      [-2, 1],
+    ]);
+  });
+
+  it('I L→2：目标旋转=2，偏移值匹配官方表', () => {
+    const piece = new Tetromino('I', { x: 3, y: 0 }, 3);
+    const attempts = piece.rotationAttemptsCCW();
+    expect(attempts.length).toBe(5);
+    expect(attempts[0]!.rotation).toBe(2);
+    expect(attempts.map((a) => a.offset)).toEqual([
+      [0, 0],
+      [-2, 0],
+      [1, 0],
+      [-2, -1],
+      [1, 2],
+    ]);
   });
 });

@@ -14,7 +14,9 @@ import {
 import { useGameStore } from '../store/useGameStore';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
+import { Button } from './ui/button';
 import { useEngine } from './TetrisGame';
+import { CONFIG } from '../config';
 
 interface SettingsPanelProps {
   open: boolean;
@@ -28,6 +30,8 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
   const arrMs = useGameStore((s) => s.arrMs);
   const setDAS = useGameStore((s) => s.setDAS);
   const setARR = useGameStore((s) => s.setARR);
+  const volume = useGameStore((s) => s.volume);
+  const setVolume = useGameStore((s) => s.setVolume);
   const engine = useEngine();
 
   /** 调整 DAS：同步到 store 和引擎 Input 实例 */
@@ -40,6 +44,19 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
   const handleARRChange = (value: number) => {
     setARR(value);
     engine.getInput().setARR(value);
+  };
+
+  /** 调整音量：同步到 store 和引擎 AudioSystem 实例 */
+  const handleVolumeChange = (value: number) => {
+    setVolume(value);
+    engine.getAudio().setVolume(value);
+  };
+
+  /** 恢复默认：重置 DAS/ARR/音量为默认值 */
+  const handleResetDefaults = () => {
+    handleDASChange(CONFIG.INPUT.DAS_MS);
+    handleARRChange(CONFIG.INPUT.ARR_MS);
+    handleVolumeChange(CONFIG.AUDIO.DEFAULT_VOLUME);
   };
 
   return (
@@ -59,6 +76,26 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
               id="audio"
               checked={audioEnabled}
               onCheckedChange={setAudioEnabled}
+            />
+          </div>
+
+          {/* 音量滑块 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="volume" className="text-sm">
+                音量
+              </Label>
+              <span className="text-xs font-mono text-muted-foreground">{volume}</span>
+            </div>
+            <input
+              id="volume"
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={volume}
+              onChange={(e) => handleVolumeChange(Number(e.target.value))}
+              className="w-full accent-primary"
             />
           </div>
 
@@ -107,6 +144,11 @@ export function SettingsPanel({ open, onOpenChange }: SettingsPanelProps) {
             <p>DAS：按住方向键后延迟多久开始自动重复（越低越灵敏）</p>
             <p>ARR：自动重复的间隔（越低移动越快）</p>
           </div>
+
+          {/* 恢复默认按钮 */}
+          <Button variant="outline" size="sm" onClick={handleResetDefaults} className="w-full">
+            恢复默认
+          </Button>
 
           <div className="pt-4 border-t border-white/10 text-xs text-muted-foreground space-y-1">
             <div className="flex justify-between">

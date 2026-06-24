@@ -25,8 +25,8 @@ export type Action =
   | 'confirm'
   | 'toggleMute';
 
-/** 支持 DAS/ARR 自动重复的动作 */
-type RepeatableAction = 'moveLeft' | 'moveRight' | 'softDrop';
+/** 支持 DAS/ARR 自动重复的动作（softDrop 由 softDropActive 标志驱动重力加速，不参与 DAS/ARR） */
+type RepeatableAction = 'moveLeft' | 'moveRight';
 
 export interface InputCallbacks {
   onAction: (action: Action) => void;
@@ -135,7 +135,7 @@ export class Input {
 
   /** 判断动作是否支持 DAS/ARR 自动重复 */
   private isRepeatable(action: Action): action is RepeatableAction {
-    return action === 'moveLeft' || action === 'moveRight' || action === 'softDrop';
+    return action === 'moveLeft' || action === 'moveRight';
   }
 
   private handleKeyDown(e: KeyboardEvent): void {
@@ -149,6 +149,13 @@ export class Input {
     // 防止 keydown 重复触发（浏览器自动重复）
     if (this.pressedKeys.has(key)) return;
     this.pressedKeys.add(key);
+
+    // 按下方向键时，停止反方向的 DAS/ARR，避免左右键定时器同时运行导致抖动
+    if (action === 'moveLeft') {
+      this.stopRepeat('moveRight');
+    } else if (action === 'moveRight') {
+      this.stopRepeat('moveLeft');
+    }
 
     // 立即触发一次
     this.callbacks.onAction(action);
@@ -171,10 +178,10 @@ export class Input {
     // 清除该按键的 DAS/ARR 定时器
     if (this.isRepeatable(action)) {
       this.stopRepeat(action);
-      // 软降松开时通知引擎停止软降
-      if (action === 'softDrop') {
-        this.callbacks.onAction('stopSoftDrop');
-      }
+    }
+    // 软降松开时通知引擎停止软降（softDrop 不再走 DAS/ARR，但仍需通过标志位清理）
+    if (action === 'softDrop') {
+      this.callbacks.onAction('stopSoftDrop');
     }
   }
 

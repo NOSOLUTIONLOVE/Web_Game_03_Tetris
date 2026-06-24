@@ -29,8 +29,6 @@ export interface ScoreInput {
   isTSpin: TSpinType;
   /** 是否 Perfect Clear */
   isPerfectClear: boolean;
-  /** 上一次是否为 B2B 状态（Tetris 或 T-Spin） */
-  b2bActive: boolean;
 }
 
 export interface ScoreResult {
@@ -74,14 +72,33 @@ export class ScoringSystem {
       CONFIG.SCORE.TETRIS,
     ];
 
+    // T-Spin / Perfect Clear 分数表（索引对应消行数）
+    const tspinScores = [
+      0,
+      CONFIG.SCORE.TSPIN_SINGLE,
+      CONFIG.SCORE.TSPIN_DOUBLE,
+      CONFIG.SCORE.TSPIN_TRIPLE,
+    ];
+    const tspinMiniScores = [
+      0,
+      CONFIG.SCORE.TSPIN_MINI_SINGLE,
+      CONFIG.SCORE.TSPIN_MINI_DOUBLE,
+      CONFIG.SCORE.TSPIN_MINI_TRIPLE,
+    ];
+    const pcScores = [
+      0,
+      CONFIG.SCORE.PC_SINGLE,
+      CONFIG.SCORE.PC_DOUBLE,
+      CONFIG.SCORE.PC_TRIPLE,
+      CONFIG.SCORE.PC_TETRIS,
+    ];
+
     if (isTSpin === 'full') {
       // T-Spin Full 计分（按消行数）
-      const tspinScores = [0, 800, 1200, 1600]; // 索引 0,1,2,3 对应 0,1,2,3 行
       baseScore = (tspinScores[lineCount] ?? 0) * level;
       if (lineCount === 0) baseScore = 400 * level; // T-Spin 无消行
     } else if (isTSpin === 'mini') {
       // T-Spin Mini 计分
-      const tspinMiniScores = [0, 200, 400, 600];
       baseScore = (tspinMiniScores[lineCount] ?? 0) * level;
       if (lineCount === 0) baseScore = 100 * level; // T-Spin Mini 无消行
     } else {
@@ -105,7 +122,6 @@ export class ScoringSystem {
     // Perfect Clear 奖励
     let pcBonus = 0;
     if (isPerfectClear && lineCount > 0) {
-      const pcScores = [0, 800, 1200, 1800, 2000];
       pcBonus = (pcScores[lineCount] ?? 0) * level;
     }
 

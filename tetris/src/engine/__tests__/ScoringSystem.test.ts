@@ -5,7 +5,6 @@
  *
  * 设计要点：
  * - ScoringSystem 内部维护 B2B 状态，通过连续调用 calculate() 测试 B2B 链
- * - ScoreInput.b2bActive 字段为信息性参数，calculate 内部使用 this.b2bActive
  * - 每次 calculate() 调用会更新内部 B2B 状态
  */
 
@@ -27,7 +26,6 @@ describe('ScoringSystem - NES 基础计分', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.SINGLE);
   });
@@ -39,7 +37,6 @@ describe('ScoringSystem - NES 基础计分', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.DOUBLE);
   });
@@ -51,7 +48,6 @@ describe('ScoringSystem - NES 基础计分', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.TRIPLE);
   });
@@ -63,7 +59,6 @@ describe('ScoringSystem - NES 基础计分', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.TETRIS);
   });
@@ -75,7 +70,6 @@ describe('ScoringSystem - NES 基础计分', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.SINGLE * 5);
   });
@@ -87,7 +81,6 @@ describe('ScoringSystem - NES 基础计分', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.TETRIS * 10);
   });
@@ -107,7 +100,6 @@ describe('ScoringSystem - Combo 连击', () => {
       combo: 1,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.SINGLE + CONFIG.SCORE.COMBO_BONUS * 1);
   });
@@ -119,7 +111,6 @@ describe('ScoringSystem - Combo 连击', () => {
       combo: 3,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.SINGLE + CONFIG.SCORE.COMBO_BONUS * 3);
   });
@@ -131,7 +122,6 @@ describe('ScoringSystem - Combo 连击', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.SINGLE);
   });
@@ -143,7 +133,6 @@ describe('ScoringSystem - Combo 连击', () => {
       combo: 2,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     // 无消行且无 T-Spin → 0 分
     expect(result.points).toBe(0);
@@ -164,7 +153,6 @@ describe('ScoringSystem - T-Spin 计分', () => {
       combo: 0,
       isTSpin: 'full',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(400);
   });
@@ -176,7 +164,6 @@ describe('ScoringSystem - T-Spin 计分', () => {
       combo: 0,
       isTSpin: 'full',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(800);
   });
@@ -188,7 +175,6 @@ describe('ScoringSystem - T-Spin 计分', () => {
       combo: 0,
       isTSpin: 'full',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(1200);
   });
@@ -200,7 +186,6 @@ describe('ScoringSystem - T-Spin 计分', () => {
       combo: 0,
       isTSpin: 'mini',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(100);
   });
@@ -212,7 +197,6 @@ describe('ScoringSystem - T-Spin 计分', () => {
       combo: 0,
       isTSpin: 'mini',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(200);
   });
@@ -232,7 +216,6 @@ describe('ScoringSystem - Back-to-Back', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.TETRIS);
     expect(result.isB2B).toBe(false);
@@ -247,7 +230,6 @@ describe('ScoringSystem - Back-to-Back', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     // 第二次 Tetris：享受 B2B 加成
     const result = scoring.calculate({
@@ -256,7 +238,6 @@ describe('ScoringSystem - Back-to-Back', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(Math.floor(CONFIG.SCORE.TETRIS * 1.5));
     expect(result.isB2B).toBe(true);
@@ -271,7 +252,6 @@ describe('ScoringSystem - Back-to-Back', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     // 再 Single：中断 B2B 链
     const result = scoring.calculate({
@@ -280,7 +260,6 @@ describe('ScoringSystem - Back-to-Back', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.SINGLE);
     expect(result.isB2B).toBe(false);
@@ -295,7 +274,6 @@ describe('ScoringSystem - Back-to-Back', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     // 再 T-Spin full 1 行：享受 B2B 加成
     const result = scoring.calculate({
@@ -304,7 +282,6 @@ describe('ScoringSystem - Back-to-Back', () => {
       combo: 0,
       isTSpin: 'full',
       isPerfectClear: false,
-      b2bActive: false,
     });
     // T-Spin full 1 行基础分 800，B2B ×1.5 = 1200
     expect(result.points).toBe(Math.floor(800 * 1.5));
@@ -326,7 +303,6 @@ describe('ScoringSystem - Perfect Clear', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: true,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.SINGLE + 800);
   });
@@ -338,7 +314,6 @@ describe('ScoringSystem - Perfect Clear', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: true,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.TETRIS + 2000);
   });
@@ -350,7 +325,6 @@ describe('ScoringSystem - Perfect Clear', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: true,
-      b2bActive: false,
     });
     // lineCount=0 且无 T-Spin → 0 分
     expect(result.points).toBe(0);
@@ -367,7 +341,6 @@ describe('ScoringSystem - reset()', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     // reset 清除 B2B 状态
     scoring.reset();
@@ -378,9 +351,165 @@ describe('ScoringSystem - reset()', () => {
       combo: 0,
       isTSpin: 'none',
       isPerfectClear: false,
-      b2bActive: false,
     });
     expect(result.points).toBe(CONFIG.SCORE.TETRIS);
     expect(result.isB2B).toBe(false);
+  });
+});
+
+describe('ScoringSystem - T-Spin Double / Triple', () => {
+  let scoring: ScoringSystem;
+
+  beforeEach(() => {
+    scoring = new ScoringSystem();
+  });
+
+  it('T-Spin Double（2 行 + T-Spin full）level 1 = 1200', () => {
+    const result = scoring.calculate({
+      lineCount: 2,
+      level: 1,
+      combo: 0,
+      isTSpin: 'full',
+      isPerfectClear: false,
+    });
+    expect(result.points).toBe(CONFIG.SCORE.TSPIN_DOUBLE);
+    expect(result.newB2B).toBe(true);
+    expect(result.isB2B).toBe(false);
+  });
+
+  it('T-Spin Double + B2B ×1.5 = 1800', () => {
+    // 先 Tetris 建立 B2B 链
+    scoring.calculate({
+      lineCount: 4,
+      level: 1,
+      combo: 0,
+      isTSpin: 'none',
+      isPerfectClear: false,
+    });
+    // T-Spin Double 享受 B2B 加成
+    const result = scoring.calculate({
+      lineCount: 2,
+      level: 1,
+      combo: 0,
+      isTSpin: 'full',
+      isPerfectClear: false,
+    });
+    expect(result.points).toBe(Math.floor(CONFIG.SCORE.TSPIN_DOUBLE * 1.5));
+    expect(result.isB2B).toBe(true);
+    expect(result.newB2B).toBe(true);
+  });
+
+  it('T-Spin Triple（3 行 + T-Spin full）level 1 = 1600', () => {
+    const result = scoring.calculate({
+      lineCount: 3,
+      level: 1,
+      combo: 0,
+      isTSpin: 'full',
+      isPerfectClear: false,
+    });
+    expect(result.points).toBe(CONFIG.SCORE.TSPIN_TRIPLE);
+    expect(result.newB2B).toBe(true);
+    expect(result.isB2B).toBe(false);
+  });
+
+  it('T-Spin Triple level 5 = 8000（1600 × 5）', () => {
+    const result = scoring.calculate({
+      lineCount: 3,
+      level: 5,
+      combo: 0,
+      isTSpin: 'full',
+      isPerfectClear: false,
+    });
+    expect(result.points).toBe(CONFIG.SCORE.TSPIN_TRIPLE * 5);
+  });
+});
+
+describe('ScoringSystem - T-Spin + Perfect Clear 组合', () => {
+  let scoring: ScoringSystem;
+
+  beforeEach(() => {
+    scoring = new ScoringSystem();
+  });
+
+  it('T-Spin Single + Perfect Clear = 800 + 800 = 1600', () => {
+    const result = scoring.calculate({
+      lineCount: 1,
+      level: 1,
+      combo: 0,
+      isTSpin: 'full',
+      isPerfectClear: true,
+    });
+    // T-Spin Single 基础分 800 + PC Single 奖励 800
+    expect(result.points).toBe(CONFIG.SCORE.TSPIN_SINGLE + CONFIG.SCORE.PC_SINGLE);
+    expect(result.newB2B).toBe(true);
+  });
+
+  it('B2B 与 Perfect Clear 可叠加：T-Spin Single + PC，B2B 加成 = 1200 + 800 = 2000', () => {
+    // 先 Tetris 建立 B2B 链
+    scoring.calculate({
+      lineCount: 4,
+      level: 1,
+      combo: 0,
+      isTSpin: 'none',
+      isPerfectClear: false,
+    });
+    // T-Spin Single + PC：享受 B2B 加成（基础分）+ PC 奖励
+    const result = scoring.calculate({
+      lineCount: 1,
+      level: 1,
+      combo: 0,
+      isTSpin: 'full',
+      isPerfectClear: true,
+    });
+    // B2B 加成：800 × 1.5 = 1200；PC 奖励：800；合计 2000
+    expect(result.points).toBe(Math.floor(CONFIG.SCORE.TSPIN_SINGLE * 1.5) + CONFIG.SCORE.PC_SINGLE);
+    expect(result.isB2B).toBe(true);
+    expect(result.newB2B).toBe(true);
+  });
+});
+
+describe('ScoringSystem - B2B 跨链（T-Spin → Tetris → T-Spin）', () => {
+  let scoring: ScoringSystem;
+
+  beforeEach(() => {
+    scoring = new ScoringSystem();
+  });
+
+  it('T-Spin → Tetris → T-Spin 维持 B2B 链不断', () => {
+    // 第一次 T-Spin Single：激活 B2B（无加成）
+    const r1 = scoring.calculate({
+      lineCount: 1,
+      level: 1,
+      combo: 0,
+      isTSpin: 'full',
+      isPerfectClear: false,
+    });
+    expect(r1.points).toBe(CONFIG.SCORE.TSPIN_SINGLE);
+    expect(r1.isB2B).toBe(false);
+    expect(r1.newB2B).toBe(true);
+
+    // 第二次 Tetris：维持 B2B 链，×1.5
+    const r2 = scoring.calculate({
+      lineCount: 4,
+      level: 1,
+      combo: 0,
+      isTSpin: 'none',
+      isPerfectClear: false,
+    });
+    expect(r2.points).toBe(Math.floor(CONFIG.SCORE.TETRIS * 1.5));
+    expect(r2.isB2B).toBe(true);
+    expect(r2.newB2B).toBe(true);
+
+    // 第三次 T-Spin Single：维持 B2B 链，×1.5
+    const r3 = scoring.calculate({
+      lineCount: 1,
+      level: 1,
+      combo: 0,
+      isTSpin: 'full',
+      isPerfectClear: false,
+    });
+    expect(r3.points).toBe(Math.floor(CONFIG.SCORE.TSPIN_SINGLE * 1.5));
+    expect(r3.isB2B).toBe(true);
+    expect(r3.newB2B).toBe(true);
   });
 });

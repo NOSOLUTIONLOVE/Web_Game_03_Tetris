@@ -96,16 +96,85 @@ export const KICKS_I: KickTable = {
   ],
 };
 
-/** 反向踢墙表（用于逆时针旋转） */
-function reverseKickTable(table: KickTable): KickTable {
-  // 0->R 是 R->0 的反向，1->L 是 3->R 的反向
-  return {
-    0: table[1]!,
-    1: table[3]!,
-    2: table[1]!,
-    3: table[3]!,
-  };
-}
+/**
+ * J/L/S/T/Z 方块逆时针旋转踢墙表
+ * 来源：https://tetris.wiki/Super_Rotation_System
+ * 索引为 fromRotation：0=0→L, 1=R→0, 2=2→R, 3=L→2
+ */
+export const KICKS_JLSTZ_CCW: KickTable = {
+  // 0 -> L
+  0: [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, -2],
+    [1, -2],
+  ],
+  // R -> 0
+  1: [
+    [0, 0],
+    [1, 0],
+    [1, -1],
+    [0, 2],
+    [1, 2],
+  ],
+  // 2 -> R
+  2: [
+    [0, 0],
+    [-1, 0],
+    [-1, 1],
+    [0, -2],
+    [-1, -2],
+  ],
+  // L -> 2
+  3: [
+    [0, 0],
+    [-1, 0],
+    [-1, -1],
+    [0, 2],
+    [-1, 2],
+  ],
+};
+
+/**
+ * I 方块逆时针旋转踢墙表
+ * 来源：https://tetris.wiki/Super_Rotation_System
+ * 索引为 fromRotation：0=0→L, 1=R→0, 2=2→R, 3=L→2
+ */
+export const KICKS_I_CCW: KickTable = {
+  // 0 -> L
+  0: [
+    [0, 0],
+    [-1, 0],
+    [2, 0],
+    [-1, 2],
+    [2, -1],
+  ],
+  // R -> 0
+  1: [
+    [0, 0],
+    [2, 0],
+    [-1, 0],
+    [2, 1],
+    [-1, -2],
+  ],
+  // 2 -> R
+  2: [
+    [0, 0],
+    [1, 0],
+    [-2, 0],
+    [1, -2],
+    [-2, 1],
+  ],
+  // L -> 2
+  3: [
+    [0, 0],
+    [-2, 0],
+    [1, 0],
+    [-2, -1],
+    [1, 2],
+  ],
+};
 
 /**
  * 获取顺时针旋转的踢墙表
@@ -117,10 +186,8 @@ export function getKicksCW(type: 'I' | 'JLSTZ', fromRotation: Rotation): KickOff
 
 /**
  * 获取逆时针旋转的踢墙表
- * 逆时针 R->0 对应顺时针 0->R 的反向
  */
 export function getKicksCCW(type: 'I' | 'JLSTZ', fromRotation: Rotation): KickOffset[] {
-  const table = type === 'I' ? KICKS_I : KICKS_JLSTZ;
-  const reversed = reverseKickTable(table);
-  return reversed[fromRotation]!;
+  const table = type === 'I' ? KICKS_I_CCW : KICKS_JLSTZ_CCW;
+  return table[fromRotation]!;
 }

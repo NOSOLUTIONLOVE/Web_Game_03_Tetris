@@ -58,6 +58,8 @@ export class Renderer {
   private designWidth: number;
   private designHeight: number;
   private dpr: number;
+  /** resize 监听器引用（用于 destroy 时移除） */
+  private resizeHandler: (() => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -100,6 +102,10 @@ export class Renderer {
     this.holdX = 0;
     this.nextX = this.panelWidth + gap + this.playfieldWidth + gap;
     this.panelY = 0;
+
+    // 监听窗口 resize（跨屏移动后 DPR 可能变化，需重新计算 backing store）
+    this.resizeHandler = this.handleDPRChange.bind(this);
+    window.addEventListener('resize', this.resizeHandler);
   }
 
   // ============ 公开 API ============
@@ -125,6 +131,14 @@ export class Renderer {
   clearAnimations(): void {
     this.clearAnimation = null;
     this.levelUpAnimation = null;
+  }
+
+  /** 销毁渲染器，移除事件监听（在 GameEngine.stop 中调用） */
+  destroy(): void {
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+      this.resizeHandler = null;
+    }
   }
 
   /** 重新计算 DPI 缩放（窗口拖到不同 DPI 显示器时） */

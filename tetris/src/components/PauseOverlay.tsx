@@ -12,6 +12,9 @@ export function PauseOverlay() {
 
   return (
     <motion.div
+      role="dialog"
+      aria-modal="true"
+      aria-label="游戏暂停"
       className="absolute inset-0 flex items-center justify-center z-10 rounded-xl"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
