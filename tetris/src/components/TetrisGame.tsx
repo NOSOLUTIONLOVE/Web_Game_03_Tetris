@@ -38,6 +38,8 @@ export function TetrisGame() {
 
     const e = new GameEngine({
       canvas,
+      initialHighScore: useGameStore.getState().highScore,
+      initialVolume: useGameStore.getState().volume,
       callbacks: {
         onPhaseChange: (p) => {
           useGameStore.getState().setPhase(p);
@@ -46,27 +48,29 @@ export function TetrisGame() {
           }
         },
         onStateChange: (snapshot) => {
-          const store = useGameStore.getState();
-          store.setScore(snapshot.score, snapshot.highScore);
-          store.setLevel(snapshot.level);
-          store.setLines(snapshot.lines);
-          store.setCombo(snapshot.combo);
-          store.setHold(snapshot.holdType);
-          store.setNext(snapshot.nextQueue);
-          store.setB2B(snapshot.b2b);
-          store.setStats(snapshot.stats);
+          // 批量更新：单次 setState 合并所有字段，避免多次独立 set 触发多余 re-render
+          useGameStore.setState({
+            score: snapshot.score,
+            highScore: snapshot.highScore,
+            level: snapshot.level,
+            lines: snapshot.lines,
+            combo: snapshot.combo,
+            holdType: snapshot.holdType,
+            nextQueue: snapshot.nextQueue,
+            b2b: snapshot.b2b,
+            stats: snapshot.stats,
+            isNewRecord: snapshot.isNewRecord,
+          });
         },
-        onLinesClear: (count, isTetris) => {
-          useGameStore.getState().setLinesClear(count, isTetris);
-          setTimeout(() => useGameStore.getState().clearFlash(), 800);
+        onLinesClear: () => {
+          // 音效由引擎内部播放（audio.playClear）；store 闪光状态已移除
         },
-        onLevelUp: (level) => {
-          useGameStore.getState().setLevelUp(level);
-          setTimeout(() => useGameStore.getState().clearLevelUp(), 1500);
+        onLevelUp: () => {
+          // 音效由引擎内部播放（audio.playLevelUp）；store 升级状态已移除
         },
         onGameOver: (_score, isNewRecord) => {
           if (isNewRecord) {
-            useGameStore.getState().setNewRecord(useGameStore.getState().highScore);
+            useGameStore.getState().setHighScore(_score);
           }
         },
       },
@@ -104,6 +108,17 @@ export function TetrisGame() {
 
   const phase = useGameStore((s) => s.phase);
 
+  // canvas 无障碍标签：根据游戏阶段 + 分数 + 等级动态生成
+  const canvasAriaLabel = useGameStore((s) => {
+    const phaseText: Record<string, string> = {
+      menu: '主菜单',
+      playing: '游戏中',
+      paused: '已暂停',
+      over: '游戏结束',
+    };
+    return `俄罗斯方块游戏区域，${phaseText[s.phase] ?? s.phase}，当前得分 ${s.score}，等级 ${s.level}`;
+  });
+
   return (
     <EngineContext.Provider value={engine}>
       <div className="w-full max-w-3xl mx-auto p-4 space-y-4">
@@ -111,6 +126,7 @@ export function TetrisGame() {
         <div className="relative mx-auto inline-block max-w-full">
           <canvas
             ref={canvasRef}
+            aria-label={canvasAriaLabel}
             className="rounded-xl ring-1 ring-white/10 shadow-2xl shadow-purple-500/20 touch-none max-w-full !h-auto"
           />
           {engine && (phase === 'menu' || phase === 'paused') && (

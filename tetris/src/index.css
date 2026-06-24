@@ -48,3 +48,11 @@
     text-shadow: 0 0 12px currentColor;
   }
 }
+
+/* 尊重用户的减少动画偏好 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

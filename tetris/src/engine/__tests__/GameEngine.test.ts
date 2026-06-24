@@ -185,8 +185,8 @@ describe('GameEngine - 计分（NES 经典）', () => {
     expect(events.clears.some(([n]) => n >= 1)).toBe(true);
   });
 
-  it('破纪录持久化到 localStorage', () => {
-    const { engine } = makeEngine();
+  it('破纪录通过 onGameOver 回调传出（引擎不再直接写 localStorage）', () => {
+    const { engine, events } = makeEngine();
     engine.startGame();
 
     // 填满最底行触发消行获得分数
@@ -202,11 +202,13 @@ describe('GameEngine - 计分（NES 经典）', () => {
     (engine as unknown as { phase: string }).phase = 'playing';
     (engine as unknown as { gameOver: () => void }).gameOver();
 
-    // 验证 localStorage 中存了 highScore
-    const stored = localStorage.getItem(CONFIG.STORAGE_KEY);
-    expect(stored).not.toBeNull();
-    const parsed = JSON.parse(stored!);
-    expect(parsed).toBeGreaterThan(0);
+    // 引擎不再直接写 localStorage[CONFIG.STORAGE_KEY]，由外部 store 负责
+    expect(localStorage.getItem(CONFIG.STORAGE_KEY)).toBeNull();
+    // 验证 onGameOver 回调被调用，且 isNewRecord = true（初始 highScore = 0）
+    expect(events.gameOver.length).toBeGreaterThan(0);
+    const [score, isNewRecord] = events.gameOver[events.gameOver.length - 1]!;
+    expect(score).toBeGreaterThan(0);
+    expect(isNewRecord).toBe(true);
   });
 });
 
@@ -461,16 +463,19 @@ describe('GameEngine - 统计跟踪', () => {
     engine.startGame();
     const lastSnap = events.snapshots[events.snapshots.length - 1];
     // startGame 会出生首个方块，故 pieces=1；其余统计均为 0
-    expect(lastSnap.stats).toEqual({
-      pieces: 1,
-      singles: 0,
-      doubles: 0,
-      triples: 0,
-      tetrises: 0,
-      tSpins: 0,
-      tSpinMinis: 0,
-      perfectClears: 0,
-    });
+    // startTime 和 duration 由 startGame/gameOver 设置，这里只验证消行相关字段为 0
+    expect(lastSnap.stats.pieces).toBe(1);
+    expect(lastSnap.stats.singles).toBe(0);
+    expect(lastSnap.stats.doubles).toBe(0);
+    expect(lastSnap.stats.triples).toBe(0);
+    expect(lastSnap.stats.tetrises).toBe(0);
+    expect(lastSnap.stats.tSpins).toBe(0);
+    expect(lastSnap.stats.tSpinMinis).toBe(0);
+    expect(lastSnap.stats.perfectClears).toBe(0);
+    expect(lastSnap.stats.maxCombo).toBe(0);
+    expect(lastSnap.stats.maxB2B).toBe(0);
+    expect(lastSnap.stats.startTime).toBeGreaterThan(0);
+    expect(lastSnap.stats.duration).toBe(0);
   });
 
   it('锁定方块后 stats.pieces 递增', () => {
@@ -511,5 +516,113 @@ describe('GameEngine - handleActionPublic', () => {
     engine.handleActionPublic('moveRight');
     const after = (engine as unknown as { current: { position: { x: number; y: number } } }).current.position.x;
     expect(after).toBe(before + 1);
+  });
+});
+
+describe('GameEngine - Hold 触发 Game Over', () => {
+  it('Hold 互换后出生位置被占 → 触发 gameOver，不推送不一致状态', () => {
+    const { engine, events } = makeEngine();
+    engine.startGame();
+
+    // 设置 holdType，使下次 hold 走互换分支
+    (engine as unknown as { holdType: string | null }).holdType = 'I';
+    // holdUsed 在 startGame 后为 false，无需修改
+
+    // 填充出生位置（缓冲区行 0-1），使新方块出生即重叠
+    const board = (engine as unknown as { board: { getFullGrid: () => Array<Array<string | null>> } }).board;
+    const grid = board.getFullGrid();
+    for (let x = 0; x < CONFIG.GRID.COLS; x++) {
+      grid[0]![x] = 'I';
+      grid[1]![x] = 'I';
+    }
+
+    const snapshotsBefore = events.snapshots.length;
+    const gameOverBefore = events.gameOver.length;
+
+    // 触发 hold（互换分支）→ 新方块出生位置被占 → gameOver
+    (engine as unknown as { handleAction: (a: string) => void }).handleAction('hold');
+
+    // 验证 gameOver 被触发
+    expect(events.gameOver.length).toBe(gameOverBefore + 1);
+    // 验证没有推送新状态（pushState 未被调用，避免不一致状态）
+    expect(events.snapshots.length).toBe(snapshotsBefore);
+    // 验证 phase = over
+    expect((engine as unknown as { phase: string }).phase).toBe('over');
+  });
+});
+
+describe('GameEngine - Lock Delay + Hard Drop', () => {
+  it('硬降应立即锁定，不走 lock delay 等待', () => {
+    const { engine } = makeEngine();
+    engine.startGame();
+
+    // 将方块移到底部（ghost 位置）
+    const board = (engine as unknown as { board: { getGhostY: (p: unknown) => number } }).board;
+    const current = (engine as unknown as { current: { position: { x: number; y: number }; clone: () => unknown } }).current;
+    const ghostY = board.getGhostY(current);
+    (engine as unknown as { current: { position: { x: number; y: number } } }).current.position.y = ghostY;
+
+    // 调用 update 触发重力 → tickGravity → tryMove(0,1) 失败 → lockDelay.start()
+    (engine as unknown as { update: (dt: number) => void }).update(1000);
+
+    const lockDelay = (engine as unknown as { lockDelay: { isActive: () => boolean; shouldLock: () => boolean } }).lockDelay;
+    expect(lockDelay.isActive()).toBe(true);
+    // elapsed=0 < DELAY_MS，不应锁定
+    expect(lockDelay.shouldLock()).toBe(false);
+
+    // 硬降应立即锁定（不等待 lock delay 到期）
+    (engine as unknown as { handleAction: (a: string) => void }).handleAction('hardDrop');
+
+    // 锁定后 lockDelay 应停止（lockCurrent → stop，spawnNext → stop）
+    expect(lockDelay.isActive()).toBe(false);
+  });
+});
+
+describe('GameEngine - Lock Delay RESET_MAX 上限', () => {
+  it('15 次重置后强制锁定（无法再 reset）', () => {
+    const { engine } = makeEngine();
+    engine.startGame();
+
+    // 将方块移到底部（ghost 位置）
+    const board = (engine as unknown as { board: { getGhostY: (p: unknown) => number } }).board;
+    const current = (engine as unknown as { current: { position: { x: number; y: number }; clone: () => unknown } }).current;
+    const ghostY = board.getGhostY(current);
+    (engine as unknown as { current: { position: { x: number; y: number } } }).current.position.y = ghostY;
+
+    // 调用 update 触发 lockDelay 启动
+    (engine as unknown as { update: (dt: number) => void }).update(1000);
+
+    const lockDelay = (engine as unknown as { lockDelay: { isActive: () => boolean; shouldLock: () => boolean; tick: (dt: number) => void } }).lockDelay;
+    expect(lockDelay.isActive()).toBe(true);
+
+    // 进行 15 次移动重置（交替左右移动，每次成功并 reset）
+    for (let i = 0; i < CONFIG.LOCK_DELAY.RESET_MAX; i++) {
+      // 每次移动前累加时间接近锁定阈值
+      lockDelay.tick(CONFIG.LOCK_DELAY.DELAY_MS - 1);
+      if (i % 2 === 0) {
+        (engine as unknown as { handleAction: (a: string) => void }).handleAction('moveLeft');
+      } else {
+        (engine as unknown as { handleAction: (a: string) => void }).handleAction('moveRight');
+      }
+    }
+
+    // 15 次重置后，resetCount 已达上限，lockDelay 仍激活
+    expect(lockDelay.isActive()).toBe(true);
+
+    // 再累加时间接近锁定，尝试第 16 次 reset（应为 no-op）
+    lockDelay.tick(CONFIG.LOCK_DELAY.DELAY_MS - 1);
+    (engine as unknown as { handleAction: (a: string) => void }).handleAction('moveLeft');
+    // reset 无效，elapsed 未归零，再 tick 1ms 达到 DELAY_MS → shouldLock = true
+    lockDelay.tick(1);
+    expect(lockDelay.shouldLock()).toBe(true);
+
+    // 调用 update 应触发强制锁定（lockCurrent → spawnNext）
+    const piecesBefore = (engine as unknown as { stats: { pieces: number } }).stats.pieces;
+    (engine as unknown as { update: (dt: number) => void }).update(1);
+    const piecesAfter = (engine as unknown as { stats: { pieces: number } }).stats.pieces;
+    // 锁定后出生新方块，pieces 递增
+    expect(piecesAfter).toBe(piecesBefore + 1);
+    // lockDelay 应已停止
+    expect(lockDelay.isActive()).toBe(false);
   });
 });

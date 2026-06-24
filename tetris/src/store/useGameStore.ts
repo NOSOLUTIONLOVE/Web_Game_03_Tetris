@@ -29,15 +29,13 @@ interface GameStore {
   b2b: boolean;
   /** 游戏统计数据 */
   stats: GameStats;
-  /** 一次性事件标记 */
-  flashLines: number | null; // 最近消行数
-  isTetris: boolean;
-  levelUpLevel: number | null; // 最近升级目标
 
   /** DAS（延迟自动移动）毫秒数，可运行时调整 */
   dasMs: number;
   /** ARR（自动重复速率）毫秒数，可运行时调整 */
   arrMs: number;
+  /** 音量（0-100） */
+  volume: number;
 
   // ============ actions（GameEngine 调用）============
   setPhase: (phase: GamePhase) => void;
@@ -47,9 +45,8 @@ interface GameStore {
   setCombo: (combo: number) => void;
   setHold: (type: TetrominoType | null) => void;
   setNext: (queue: TetrominoType[]) => void;
-  setLinesClear: (count: number, isTetris: boolean) => void;
-  setLevelUp: (level: number) => void;
   setNewRecord: (highScore: number) => void;
+  setHighScore: (score: number) => void;
   setB2B: (b2b: boolean) => void;
   setStats: (stats: GameStats) => void;
 
@@ -57,10 +54,9 @@ interface GameStore {
   toggleAudio: () => void;
   setAudioEnabled: (enabled: boolean) => void;
   resetRound: () => void;
-  clearFlash: () => void;
-  clearLevelUp: () => void;
   setDAS: (ms: number) => void;
   setARR: (ms: number) => void;
+  setVolume: (v: number) => void;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -87,12 +83,14 @@ export const useGameStore = create<GameStore>()(
         tSpins: 0,
         tSpinMinis: 0,
         perfectClears: 0,
+        maxCombo: 0,
+        maxB2B: 0,
+        startTime: 0,
+        duration: 0,
       },
-      flashLines: null,
-      isTetris: false,
-      levelUpLevel: null,
       dasMs: CONFIG.INPUT.DAS_MS,
       arrMs: CONFIG.INPUT.ARR_MS,
+      volume: CONFIG.AUDIO.DEFAULT_VOLUME,
 
       // GameEngine 回调
       setPhase: (phase) => set({ phase }),
@@ -103,9 +101,8 @@ export const useGameStore = create<GameStore>()(
       setCombo: (combo) => set({ combo }),
       setHold: (holdType) => set({ holdType }),
       setNext: (nextQueue) => set({ nextQueue }),
-      setLinesClear: (count, isTetris) => set({ flashLines: count, isTetris }),
-      setLevelUp: (level) => set({ levelUpLevel: level }),
       setNewRecord: (highScore) => set({ highScore, isNewRecord: true }),
+      setHighScore: (score) => set({ highScore: score, isNewRecord: true }),
       setB2B: (b2b) => set({ b2b }),
       setStats: (stats) => set({ stats }),
 
@@ -128,24 +125,25 @@ export const useGameStore = create<GameStore>()(
             tSpins: 0,
             tSpinMinis: 0,
             perfectClears: 0,
+            maxCombo: 0,
+            maxB2B: 0,
+            startTime: 0,
+            duration: 0,
           },
-          flashLines: null,
-          isTetris: false,
-          levelUpLevel: null,
         }),
-      clearFlash: () => set({ flashLines: null, isTetris: false }),
-      clearLevelUp: () => set({ levelUpLevel: null }),
       setDAS: (ms) => set({ dasMs: ms }),
       setARR: (ms) => set({ arrMs: ms }),
+      setVolume: (v) => set({ volume: v }),
     }),
     {
       name: 'tetris:store',
-      // 只持久化 highScore、audioEnabled、dasMs、arrMs
+      // 只持久化 highScore、audioEnabled、dasMs、arrMs、volume
       partialize: (s) => ({
         highScore: s.highScore,
         audioEnabled: s.audioEnabled,
         dasMs: s.dasMs,
         arrMs: s.arrMs,
+        volume: s.volume,
       }),
     }
   )

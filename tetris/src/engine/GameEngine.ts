@@ -34,7 +34,6 @@ import { Bag } from './Bag';
 import { Renderer } from './Renderer';
 import { Input, type Action } from './Input';
 import { AudioSystem } from '../lib/audio';
-import { storage } from '../lib/storage';
 import { LockDelayManager } from './LockDelayManager';
 import { ScoringSystem } from './ScoringSystem';
 
@@ -56,6 +55,14 @@ export interface GameStats {
   tSpinMinis: number;
   /** Perfect Clear 次数 */
   perfectClears: number;
+  /** 最大连击数 */
+  maxCombo: number;
+  /** 最大 B2B 链长度 */
+  maxB2B: number;
+  /** 游戏开始时间戳（ms） */
+  startTime: number;
+  /** 游戏时长（ms） */
+  duration: number;
 }
 
 export interface GameSnapshot {
@@ -92,6 +99,10 @@ export interface GameEngineCallbacks {
 export interface GameEngineOptions {
   canvas: HTMLCanvasElement;
   callbacks: GameEngineCallbacks;
+  /** 初始最高分（由外部 store 提供，引擎不再直接读写 localStorage） */
+  initialHighScore?: number;
+  /** 初始音量（0-100，由外部 store 提供） */
+  initialVolume?: number;
 }
 
 export class GameEngine {
@@ -140,6 +151,8 @@ export class GameEngine {
 
   // ============ B2B 状态 ============
   private b2bActive = false;
+  /** 当前 B2B 链长度（连续硬消行计数） */
+  private b2bChain = 0;
 
   // ============ 下落间隔缓存 ============
   private dropIntervalCache = new Map<number, number>();
@@ -154,22 +167,26 @@ export class GameEngine {
     tSpins: 0,
     tSpinMinis: 0,
     perfectClears: 0,
+    maxCombo: 0,
+    maxB2B: 0,
+    startTime: 0,
+    duration: 0,
   };
 
   // ============ 页面可见性 ============
   private visibilityHandler: (() => void) | null = null;
 
   constructor(options: GameEngineOptions) {
-    const { canvas, callbacks } = options;
+    const { canvas, callbacks, initialHighScore, initialVolume } = options;
     this.callbacks = callbacks;
 
-    this.highScore = storage.get<number>(CONFIG.STORAGE_KEY, 0);
+    this.highScore = initialHighScore ?? 0;
 
     this.board = new Board();
     this.bag = new Bag();
     this.renderer = new Renderer(canvas);
     this.input = new Input();
-    this.audio = new AudioSystem();
+    this.audio = new AudioSystem(initialVolume);
 
     // 预填 Next 队列（比 NEXT_COUNT 多 1，current 出生时取走 1 个）
     this.nextQueue = this.bag.take(CONFIG.NEXT_COUNT + 1);
@@ -199,6 +216,8 @@ export class GameEngine {
   public stop(): void {
     cancelAnimationFrame(this.rafId);
     this.input.unbind();
+    this.audio.close();
+    this.renderer.destroy();
     if (this.visibilityHandler) {
       document.removeEventListener('visibilitychange', this.visibilityHandler);
       this.visibilityHandler = null;
@@ -323,6 +342,9 @@ export class GameEngine {
     const count = rows.length;
     this.combo++;
 
+    // 更新最大连击数
+    this.stats.maxCombo = Math.max(this.stats.maxCombo, Math.max(0, this.combo));
+
     // T-Spin 检测（仅当上一步为旋转时）
     const isTSpin = this.lastMoveWasRotate && this.current
       ? this.board.isTSpin(this.current, this.lastMoveWasRotate)
@@ -339,12 +361,20 @@ export class GameEngine {
       combo: Math.max(0, this.combo),
       isTSpin,
       isPerfectClear,
-      b2bActive: this.b2bActive,
     });
 
     this.score += result.points;
     this.lines += count;
+
+    // 跟踪 B2B 链长度并更新最大值
+    const wasB2B = this.b2bActive;
     this.b2bActive = result.newB2B;
+    if (result.newB2B) {
+      this.b2bChain = wasB2B ? this.b2bChain + 1 : 1;
+    } else {
+      this.b2bChain = 0;
+    }
+    this.stats.maxB2B = Math.max(this.stats.maxB2B, this.b2bChain);
 
     // 更新统计
     if (count === 1) this.stats.singles++;
@@ -361,6 +391,7 @@ export class GameEngine {
       this.level = newLevel;
       this.callbacks.onLevelUp(this.level);
       this.audio.playLevelUp();
+      this.renderer.setLevelUpAnimation(this.level);
     }
 
     // 动画
@@ -401,15 +432,19 @@ export class GameEngine {
   private gameOver(): void {
     if (this.phase !== 'playing') return;
     this.audio.playGameOver();
+    // 计算游戏时长
+    if (this.stats.startTime > 0) {
+      this.stats.duration = Date.now() - this.stats.startTime;
+    }
     this.setPhase('over');
 
-    // 破纪录
+    // 破纪录判定（严格大于，与 snapshot 一致）
     const isNewRecord = this.score > this.highScore;
     if (isNewRecord) {
       this.highScore = this.score;
-      storage.set(CONFIG.STORAGE_KEY, this.highScore);
     }
 
+    // 由外部（TetrisGame.tsx）负责将新 highScore 写入 store
     this.callbacks.onGameOver(this.score, isNewRecord);
   }
 
@@ -429,6 +464,7 @@ export class GameEngine {
     this.lockDelay.stop();
     this.scoring.reset();
     this.b2bActive = false;
+    this.b2bChain = 0;
     this.lastMoveWasRotate = false;
     this.softDropActive = false;
     this.stats = {
@@ -440,6 +476,10 @@ export class GameEngine {
       tSpins: 0,
       tSpinMinis: 0,
       perfectClears: 0,
+      maxCombo: 0,
+      maxB2B: 0,
+      startTime: Date.now(),
+      duration: 0,
     };
     this.dropIntervalCache.clear();
     this.renderer.clearAnimations();
@@ -474,11 +514,6 @@ export class GameEngine {
     return this.input;
   }
 
-  /** 停止软降（keyup 事件触发） */
-  public stopSoftDrop(): void {
-    this.softDropActive = false;
-  }
-
   /** 外部调用动作入口（移动端按钮等） */
   public handleActionPublic(action: Action): void {
     this.handleAction(action);
@@ -502,6 +537,9 @@ export class GameEngine {
     if (this.phase === 'menu' || this.phase === 'over') {
       if (action === 'confirm' || action === 'reset') {
         this.startGame();
+      } else if (this.phase === 'over' && action === 'pause') {
+        // over 阶段 Esc 返回菜单（Footer 提示 "Esc 返回菜单"）
+        this.backToMenu();
       }
       return;
     }
@@ -637,6 +675,7 @@ export class GameEngine {
 
     if (this.board.isGameOver(this.current)) {
       this.gameOver();
+      return;
     }
     this.pushState();
   }
@@ -679,7 +718,7 @@ export class GameEngine {
       level: this.level,
       lines: this.lines,
       combo: Math.max(0, this.combo),
-      isNewRecord: this.score > 0 && this.score >= this.highScore,
+      isNewRecord: this.score > 0 && this.score > this.highScore,
       b2b: this.b2bActive,
       stats: { ...this.stats },
     };

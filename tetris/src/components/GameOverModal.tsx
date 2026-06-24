@@ -1,7 +1,7 @@
 /**
  * GameOverModal - 游戏结束弹窗
  *
- * 显示：最终分数 + 是否破纪录 + 重玩/菜单按钮
+ * 显示：最终分数 + 是否破纪录 + 详细统计 + 重玩/菜单按钮
  */
 
 import { motion } from 'framer-motion';
@@ -10,6 +10,14 @@ import { useEngine } from './TetrisGame';
 import { useGameStore } from '../store/useGameStore';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+
+/** 将毫秒时长格式化为 mm:ss */
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
 
 export function GameOverModal() {
   const engine = useEngine();
@@ -22,6 +30,9 @@ export function GameOverModal() {
 
   return (
     <motion.div
+      role="dialog"
+      aria-modal="true"
+      aria-label="游戏结束"
       className="fixed inset-0 z-50 flex items-center justify-center"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -57,11 +68,20 @@ export function GameOverModal() {
         {/* 详细统计 */}
         <div className="mt-3 grid grid-cols-3 gap-2">
           <Stat label="PIECES" value={stats.pieces} accent="text-muted-foreground" small />
+          <Stat label="SINGLE" value={stats.singles} accent="text-blue-400" small />
+          <Stat label="DOUBLE" value={stats.doubles} accent="text-green-400" small />
+          <Stat label="TRIPLE" value={stats.triples} accent="text-green-400" small />
+          <Stat label="TETRIS" value={stats.tetrises} accent="text-cyan-400" small />
           <Stat label="T-SPIN" value={stats.tSpins} accent="text-purple-400" small />
           <Stat label="MINI" value={stats.tSpinMinis} accent="text-purple-300" small />
-          <Stat label="TETRIS" value={stats.tetrises} accent="text-cyan-400" small />
-          <Stat label="TRIPLE" value={stats.triples} accent="text-green-400" small />
           <Stat label="P-CLEAR" value={stats.perfectClears} accent="text-yellow-400" small />
+          <Stat label="MAX COMBO" value={stats.maxCombo} accent="text-orange-400" small />
+        </div>
+
+        {/* 游戏时长 */}
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Stat label="MAX B2B" value={stats.maxB2B} accent="text-pink-400" small />
+          <DurationStat label="TIME" value={formatDuration(stats.duration)} />
         </div>
 
         <div className="mt-6 flex flex-col gap-2">
@@ -98,6 +118,15 @@ function Stat({
       >
         {value}
       </div>
+    </div>
+  );
+}
+
+function DurationStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="text-center px-2 py-1.5 rounded-lg bg-secondary/60">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="font-mono font-bold tabular-nums text-sm text-amber-400">{value}</div>
     </div>
   );
 }

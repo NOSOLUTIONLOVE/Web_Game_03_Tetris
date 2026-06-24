@@ -10,18 +10,35 @@ import { useGameStore } from '../store/useGameStore';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { SettingsPanel } from './SettingsPanel';
-import { useState } from 'react';
+import { useState, memo } from 'react';
+import { shallow } from 'zustand/shallow';
 
 export function HUD() {
-  const score = useGameStore((s) => s.score);
-  const highScore = useGameStore((s) => s.highScore);
-  const isNewRecord = useGameStore((s) => s.isNewRecord);
-  const lines = useGameStore((s) => s.lines);
-  const level = useGameStore((s) => s.level);
-  const audioEnabled = useGameStore((s) => s.audioEnabled);
-  const toggleAudio = useGameStore((s) => s.toggleAudio);
-  const combo = useGameStore((s) => s.combo);
-  const b2b = useGameStore((s) => s.b2b);
+  // shallow 比较订阅多个字段，避免单个字段变化导致全组件 re-render
+  const {
+    score,
+    highScore,
+    isNewRecord,
+    lines,
+    level,
+    audioEnabled,
+    combo,
+    b2b,
+    toggleAudio,
+  } = useGameStore(
+    (s) => ({
+      score: s.score,
+      highScore: s.highScore,
+      isNewRecord: s.isNewRecord,
+      lines: s.lines,
+      level: s.level,
+      audioEnabled: s.audioEnabled,
+      combo: s.combo,
+      b2b: s.b2b,
+      toggleAudio: s.toggleAudio,
+    }),
+    shallow
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
@@ -112,18 +129,14 @@ interface NumberCardProps {
   pulse?: boolean;
 }
 
-function NumberCard({ label, value, accent, pulse }: NumberCardProps) {
+const NumberCard = memo(function NumberCard({ label, value, accent, pulse }: NumberCardProps) {
   return (
     <div className="text-center px-3 py-1.5 rounded-lg bg-secondary/60 min-w-[64px]">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
       <motion.div
         key={value}
         initial={{ scale: 1 }}
-        animate={
-          pulse
-            ? { scale: [1, 1.3, 1], color: ['#facc15', '#facc15', '#facc15'] }
-            : { scale: [1, 1.25, 1] }
-        }
+        animate={{ scale: pulse ? [1, 1.3, 1] : [1, 1.25, 1] }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
         className={`font-mono text-base font-bold tabular-nums ${accent}`}
       >
@@ -131,4 +144,4 @@ function NumberCard({ label, value, accent, pulse }: NumberCardProps) {
       </motion.div>
     </div>
   );
-}
+});

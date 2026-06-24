@@ -34,9 +34,20 @@ export const gameConfigSchema = z.object({
     softDrop: z.number().int().positive(),
     hardDrop: z.number().int().positive(),
     comboBonus: z.number().int().nonnegative(),
+    tspinSingle: z.number().int().nonnegative(),
+    tspinDouble: z.number().int().nonnegative(),
+    tspinTriple: z.number().int().nonnegative(),
+    tspinMiniSingle: z.number().int().nonnegative(),
+    tspinMiniDouble: z.number().int().nonnegative(),
+    tspinMiniTriple: z.number().int().nonnegative(),
+    pcSingle: z.number().int().nonnegative(),
+    pcDouble: z.number().int().nonnegative(),
+    pcTriple: z.number().int().nonnegative(),
+    pcTetris: z.number().int().nonnegative(),
   }),
   audio: z.object({
     enabled: z.boolean(),
+    defaultVolume: z.number().int().min(0).max(100),
   }),
 });
 
@@ -129,6 +140,19 @@ export const CONFIG = {
     SOFT_DROP: 1,
     HARD_DROP: 2,
     COMBO_BONUS: 50,
+    /** T-Spin Full 消行基础分（× level） */
+    TSPIN_SINGLE: 800,
+    TSPIN_DOUBLE: 1200,
+    TSPIN_TRIPLE: 1600,
+    /** T-Spin Mini 消行基础分（× level） */
+    TSPIN_MINI_SINGLE: 200,
+    TSPIN_MINI_DOUBLE: 400,
+    TSPIN_MINI_TRIPLE: 600,
+    /** Perfect Clear 奖励基础分（× level） */
+    PC_SINGLE: 800,
+    PC_DOUBLE: 1200,
+    PC_TRIPLE: 1800,
+    PC_TETRIS: 2000,
   },
 
   /**
@@ -167,6 +191,12 @@ export const CONFIG = {
     DAS_MS: 167,
     /** 自动重复间隔（ms） */
     ARR_MS: 33,
+  },
+
+  /** 音频配置 */
+  AUDIO: {
+    /** 默认音量（0-100） */
+    DEFAULT_VOLUME: 100,
   },
 
   /** 锁定延迟：方块落地后给予的操作缓冲时间 */
