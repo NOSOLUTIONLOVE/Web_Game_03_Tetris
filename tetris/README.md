@@ -4,7 +4,7 @@
 
 ![Version](https://img.shields.io/badge/version-0.1.0-blue)
 ![Stack](https://img.shields.io/badge/stack-React%2018%20%2B%20Vite%20%2B%20TS-purple)
-![Tests](https://img.shields.io/badge/tests-77%2F77-green)
+![Tests](https://img.shields.io/badge/tests-148%2F148-green)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
@@ -19,12 +19,16 @@
 - 📦 **Hold / Next**：现代机制标配
 - ⚡ **60Hz 主循环 + 速度曲线**：每 10 行 +1 级
 - 🎵 **9 个 Web Audio 合成音效**：零素材依赖
-- 📱 **键盘 + 触屏**：桌面 + 移动端通用
+- 🎮 **DAS/ARR 可配置输入**：流畅的连击移动手感
+- ⏱️ **Lock Delay（500ms 延迟锁定）**：方块触底后留出操作窗口
+- 🏆 **T-Spin / Back-to-Back / Perfect Clear 计分**：现代竞技规则
+- 📱 **键盘 + 触屏**：桌面 + 移动端通用，移动端虚拟 D-pad
 - 💾 **最高分持久化**：localStorage
+- 📲 **PWA 离线支持**：可安装到桌面/主屏幕，断网可玩
 
 **质量门禁**：
 - ✅ TypeScript 严格模式 + Zod schema
-- ✅ 77 个单元测试全绿
+- ✅ 148 个单元测试全绿
 - ✅ ESLint 0 错误
 - ✅ Vercel 部署就绪
 
@@ -55,19 +59,22 @@
 
 ### 3.2 触屏
 
-| 手势 | 动作 |
+底部虚拟 D-pad，**仅触屏设备显示**（自动检测 `pointer: coarse`）：
+
+| 按钮 | 动作 |
 | --- | --- |
-| 左滑 / 右滑 | 左右移动 |
-| 上滑 | 硬降 |
-| 下滑 | 软降 |
-| 点击 | 旋转 |
-| 双指点击 | Hold |
+| ◀ 左 | 左移 |
+| ▶ 右 | 右移 |
+| ▼ 下 | 软降（加速下落） |
+| ↻ 旋转 | 顺时针旋转 |
+| Hold | 暂存当前方块 |
+| ⤓ 硬降 | 一键到底 |
 
 ### 3.3 移动端
 
 - 横向放置设备获得最佳体验
 - Canvas 自动适配屏幕宽度
-- 触屏阈值 30px（避免误触）
+- 虚拟按键支持长按连发（DAS/ARR 同键盘）
 
 ---
 
@@ -100,6 +107,16 @@ npm run preview
 # → http://127.0.0.1:4175/
 ```
 
+
+### 4.3 PWA 安装
+
+本项目支持 PWA（Progressive Web App）：
+
+- **可安装**：在 Chrome / Edge / Safari 中点击地址栏安装图标，即可添加到桌面/主屏幕，以独立窗口运行
+- **离线运行**：构建后自动生成 Service Worker（`vite-plugin-pwa`），首次访问后所有资源被缓存，断网仍可游玩
+- **自动生成**：执行 `npm run build` 时自动生成 `manifest.webmanifest` 与 SW，无需手动配置
+
+> 提示：开发模式（`npm run dev`）下 PWA 默认禁用，请在 `npm run preview` 或生产部署中验证安装能力。
 ---
 
 ## 五、构建与测试
@@ -130,7 +147,7 @@ npm run build
 **质量门禁标准**：
 - `type-check` 0 错误
 - `lint` 0 错误
-- `test` 77/77 全绿
+- `test` 148/148 全绿
 - `build` 成功，产物 ≤ 500KB gzip
 
 ---
@@ -159,6 +176,8 @@ games/tetris/
 │   │   ├── GameOverModal.tsx          # 结束弹窗
 │   │   ├── SettingsPanel.tsx          # 设置面板
 │   │   ├── Overlays.tsx               # 遮罩统一管理
+│   │   ├── ErrorBoundary.tsx          # 错误边界（捕获渲染异常）
+│   │   ├── MobileControls.tsx         # 移动端虚拟 D-pad 控制
 │   │   └── Footer.tsx                 # 底部快捷键
 │   ├── engine/                        # 纯 TS 游戏引擎
 │   │   ├── GameEngine.ts              # 编排 + 状态机
@@ -169,7 +188,9 @@ games/tetris/
 │   │   ├── Bag.ts                     # 7-bag 随机
 │   │   ├── Renderer.ts                # Canvas 渲染
 │   │   ├── Input.ts                   # 键盘 + 触屏
-│   │   └── __tests__/                 # 单元测试（77 个）
+│   │   ├── ScoringSystem.ts           # 计分系统（T-Spin/B2B/Perfect Clear）
+│   │   ├── LockDelayManager.ts        # 锁定延迟管理（500ms）
+│   │   └── __tests__/                 # 单元测试（148 个）
 │   ├── lib/
 │   │   ├── audio.ts                   # Web Audio 合成
 │   │   ├── storage.ts                 # localStorage 封装
@@ -209,6 +230,7 @@ games/tetris/
 | 渲染 | Canvas 2D |
 | 测试 | Vitest 1 + happy-dom 14 |
 | Schema 校验 | Zod 3 |
+| PWA | vite-plugin-pwa 1 |
 | 部署 | Vercel |
 
 完整技术决策见 [03 - 技术选型](./docs/03-技术选型.md)。
@@ -315,6 +337,7 @@ current.move(-1, 0) → pushState() → UI 更新
 | 版本 | 日期 | 描述 |
 | --- | --- | --- |
 | v0.1.0 | 2026-06-23 | 初版：完整可玩 + SRS + Hold + 等级 + 77 测试 + 6 文档 |
+| v2.0 | 2026-06-25 | 深度优化：DAS/ARR、Lock Delay、T-Spin/B2B/Perfect Clear、DPI 渲染、移动端控制、PWA 支持、148 测试 |
 
 ---
 
